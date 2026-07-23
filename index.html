@@ -81,6 +81,22 @@ body{font-family:'Plus Jakarta Sans','Inter',system-ui,sans-serif;background:var
 .datepill{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:12px;
   padding:8px 13px;font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap}
 .datepill svg{width:15px;height:15px;color:var(--lime-deep)}
+.datepill{cursor:pointer;transition:.15s}
+.datepill:hover{border-color:var(--lime-deep);box-shadow:0 2px 10px rgba(15,23,42,.06)}
+.dp-caret{width:14px !important;height:14px !important;color:var(--faint) !important;margin-left:2px}
+.date-wrap{position:relative}
+.date-panel{position:absolute;top:46px;right:0;width:250px;background:#fff;border:1px solid var(--line);
+  border-radius:16px;box-shadow:0 18px 44px rgba(15,23,42,.14);padding:6px;z-index:60;
+  opacity:0;visibility:hidden;transform:translateY(-6px);transition:.18s cubic-bezier(.4,0,.2,1)}
+.date-panel.show{opacity:1;visibility:visible;transform:none}
+.dp-list{max-height:344px;overflow-y:auto}
+.dp-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;border-radius:10px;
+  cursor:pointer;font-size:12.8px;font-weight:650;color:var(--ink)}
+.dp-item:hover{background:var(--bg)}
+.dp-item.on{background:var(--lime);color:var(--lime-ink);font-weight:800}
+.dp-item small{font-size:11px;color:var(--faint);font-weight:600}
+.dp-item.on small{color:var(--lime-ink);opacity:.75}
+.dp-sep{height:1px;background:var(--line);margin:5px 8px}
 .profile{display:flex;align-items:center;gap:10px;padding:5px 5px 5px 12px;border:1px solid var(--line);border-radius:14px;background:#fff;cursor:pointer}
 .profile .pf-t{text-align:right;line-height:1.2}
 .profile .pf-t b{font-size:12.5px;font-weight:700;display:block}
@@ -301,7 +317,7 @@ tbody tr:last-child td{border-bottom:none}
       <a data-view="daily"><i data-lucide="calendar-check"></i><span>Monitoring Harian</span></a>
       <a data-view="analytics"><i data-lucide="bar-chart-3"></i><span>Analitik Kehadiran</span></a>
       <div class="nav-label">Manajemen</div>
-      <a data-view="remu"><i data-lucide="coins"></i><span>Remunerasi</span></a>
+      <a data-view="remu"><i data-lucide="coins"></i><span>Poin Kehadiran</span></a>
       <a data-view="profile"><i data-lucide="users"></i><span>Profil Pegawai</span></a>
       <a data-view="reports"><i data-lucide="file-text"></i><span>Laporan</span></a>
       <a data-view="settings"><i data-lucide="settings"></i><span>Pengaturan</span></a>
@@ -314,7 +330,7 @@ tbody tr:last-child td{border-bottom:none}
   <!-- MAIN -->
   <div class="main">
     <header class="topbar">
-      <div class="page-title" id="pageTitle">Dashboard<small id="pageSub">Ringkasan kehadiran unit</small></div>
+      <div class="page-title" id="pageTitle">Dashboard</div>
       <span id="lastUpd" style="font-size:11px;color:var(--faint);font-weight:600;white-space:nowrap"></span>
       <div class="search">
         <i data-lucide="search"></i>
@@ -328,7 +344,10 @@ tbody tr:last-child td{border-bottom:none}
           <div class="np-body" id="notifBody"></div>
         </div>
       </div>
-      <div class="datepill"><i data-lucide="calendar"></i><span id="periodPill">Memuat…</span></div>
+      <div class="date-wrap">
+        <button class="datepill" id="dateBtn"><i data-lucide="calendar"></i><span id="periodPill">Memuat…</span><i data-lucide="chevron-down" class="dp-caret"></i></button>
+        <div class="date-panel" id="datePanel"><div class="dp-list" id="dateList"></div></div>
+      </div>
       <button class="icon-btn" id="reloadBtn" title="Muat ulang data"><i data-lucide="refresh-cw"></i></button>
     </header>
     <div class="content" id="content"></div>
@@ -365,6 +384,8 @@ const CAT_META={
 };
 const AVCOL=['#16A34A','#0EA5E9','#8B5CF6','#F59E0B','#EF4444','#A8D94A','#0F766E'];
 let charts={}, sortState={}, curView='dashboard', curEmp=null, lastStamp=null;
+let SEL_DAY=null;   // null = seluruh periode, atau nomor hari
+let curDay=null;    // hari yang sedang dibuka di Monitoring Harian
 let RUBRIC={absen:-5, late:-1.5, early:-1, izin:-1, sakit:-0.5, ot:0.25};
 
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -391,14 +412,13 @@ function animate(el,to,dur=900,dec=0){
   requestAnimationFrame(tick);
 }
 
-const TITLES={dashboard:['Dashboard','Ringkasan kehadiran unit'],daily:['Monitoring Harian','Kehadiran per hari'],
-  analytics:['Analitik Kehadiran','Pola & tren mendalam'],remu:['Remunerasi','Poin kehadiran berbasis kebijakan'],
-  profile:['Profil Pegawai','Detail kehadiran individu'],reports:['Laporan','Ekspor & rekap'],settings:['Pengaturan','Ambang & preferensi']};
+const TITLES={dashboard:['Dashboard'],daily:['Monitoring Harian'],analytics:['Analitik Kehadiran'],
+  remu:['Poin Kehadiran'],profile:['Profil Pegawai'],reports:['Laporan'],settings:['Pengaturan']};
 
 function nav(v){
   curView=v; curEmp=null;
   $$('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.view===v));
-  const [t,s]=TITLES[v]; $('#pageTitle').childNodes[0].textContent=t; $('#pageSub').textContent=s;
+  $('#pageTitle').textContent=TITLES[v][0];
   Object.values(charts).forEach(c=>c&&c.destroy()); charts={};
   ({dashboard:renderDashboard,daily:renderDaily,analytics:renderAnalytics,remu:renderRemu,
     profile:renderProfile,reports:renderReports,settings:renderSettings}[v])();
@@ -407,68 +427,71 @@ function nav(v){
 
 /* ---------------- DASHBOARD ---------------- */
 function renderDashboard(){
-  const m=DATA.meta,k=DATA.kpi;
+  const m=DATA.meta,k=kpiScope();
   const html=`
   <div class="kpi-grid" id="kpis">
     ${kpiCard('users','ic-lime',k.total_emp,'Total Pegawai',null)}
-    ${kpiCard('user-check','ic-em',k.present_latest,'Hadir Hari Ini','up',Math.round(k.present_latest/k.total_emp*100)+'% roster')}
-    ${kpiCard('clock','ic-am',k.late_latest,'Terlambat Hari Ini','down',null)}
-    ${kpiCard('gauge','ic-sky',k.attn_score_avg,'Skor Kehadiran',null,'rata-rata',1)}
-    ${kpiCard('timer','ic-vi',k.avg_delay_min,'Median Keterlambatan','down','menit',1)}
-    ${kpiCard('alert-triangle','ic-dg',k.exceed_late,'Lewat Batas Telat','down','>'+m.late_limit+'x')}
+    ${kpiCard('user-check','ic-em',k.present,'Hadir '+k.tag,'up',Math.round(k.present/k.total_emp*100)+'% roster')}
+    ${kpiCard('clock','ic-am',k.late,'Terlambat '+k.tag,'down',null)}
+    ${kpiCard('gauge','ic-sky',k.score,'Skor Kehadiran · periode',null,'rata-rata',1)}
+    ${kpiCard('timer','ic-vi',k.median,'Median Keterlambatan · '+k.tag,'down','menit',1)}
+    ${kpiCard('alert-triangle','ic-dg',k.exceed,'Lewat Batas Telat · periode','down','>'+m.late_limit+'x')}
   </div>
   <div class="grid g-2-1">
     <div class="card" id="trendCard">
-      <div class="card-h"><div><h3>Tren Keterlambatan Harian</h3><p>Jumlah pegawai terlambat, ${m.period_start} – ${m.period_end}</p></div>
+      <div class="card-h"><div><h3>Tren Keterlambatan Harian</h3><p>Jumlah pegawai terlambat · ${scopeLabel()}</p></div>
         <div class="h-act"><button class="chip on" data-tr="late">Terlambat</button><button class="chip" data-tr="present">Hadir</button></div></div>
       <div class="canvas-wrap"><canvas id="cTrend"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-h"><div><h3>Komposisi Kehadiran</h3><p>Seluruh periode</p></div></div>
+      <div class="card-h"><div><h3>Komposisi Kehadiran</h3><p>${scopeLabel()}</p></div></div>
       <div class="canvas-wrap sm"><canvas id="cDonut"></canvas></div>
       <div class="legend" id="donutLegend"></div>
     </div>
   </div>
   <div class="grid g-3-2">
     <div class="card">
-      <div class="card-h"><div><h3>Kehadiran per Hari</h3><p>Distribusi status setiap hari kerja</p></div></div>
+      <div class="card-h"><div><h3>Kehadiran per Hari</h3><p>Distribusi status · ${scopeLabel()}</p></div></div>
       <div class="canvas-wrap"><canvas id="cStack"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-h"><div><h3>Ringkasan Remunerasi</h3><p>Poin kehadiran unit (kebijakan aktif)</p></div>
+      <div class="card-h"><div><h3>Ringkasan Poin Kehadiran</h3></div>
         <a class="chip" onclick="nav('remu')">Atur <i data-lucide="arrow-right"></i></a></div>
       <div id="remuMini"></div>
     </div>
   </div>
   <div class="grid g-2-1">
     <div class="card">
-      <div class="card-h"><div><h3>Terlambat Hari Ini</h3><p>${m.latest_date} · jam masuk terjadwal ${m.sched_start}</p></div>
-        <button class="chip" onclick="exportTable('lateToday','Terlambat_Hari_Ini')"><i data-lucide="download"></i>CSV</button></div>
+      <div class="card-h"><div><h3>Terlambat ${SEL_DAY?'':'Hari Ini'}</h3><p>${dayLong(focusDay())} · jam masuk terjadwal ${m.sched_start}</p></div>
+        <button class="chip" onclick="exportLateCSV()"><i data-lucide="download"></i>CSV</button></div>
       <div class="tbl-scroll"><table id="lateToday"></table></div>
     </div>
     <div class="card">
-      <div class="card-h"><div><h3>Isu Kehadiran Teratas</h3><p>Akumulasi menit terlambat</p></div></div>
+      <div class="card-h"><div><h3>Isu Kehadiran Teratas</h3><p>Akumulasi menit terlambat · ${scopeLabel()}</p></div></div>
       <div id="topIssues"></div>
     </div>
   </div>
-  <div class="grid g-1-1">
-    <div class="card">
-      <div class="card-h"><div><h3>Heatmap Keterlambatan</h3><p>Konsentrasi telat menurut hari & jam masuk</p></div></div>
-      <div id="heatmap"></div>
-    </div>
-    <div class="card">
-      <div class="card-h"><div><h3>Skor Kehadiran Terendah</h3><p>Perlu perhatian pembinaan</p></div>
-        <a class="chip" onclick="nav('profile')">Semua <i data-lucide="arrow-right"></i></a></div>
-      <div class="tbl-scroll"><table id="lowScore"></table></div>
-    </div>
+  <div class="card">
+    <div class="card-h"><div><h3>Heatmap Keterlambatan</h3><p>Konsentrasi telat menurut hari & jam masuk · ${scopeLabel()}</p></div></div>
+    <div id="heatmap"></div>
   </div>
-  <div class="note"><b>Catatan metodologi.</b> Data direkonstruksi dari <i>Laporan Harian</i> (status resmi sistem) dan <i>Rekap Jam</i> (jam transaksi). Status hadir/telat/absen mengikuti penandaan sistem presensi. Menit keterlambatan dihitung dari jam masuk aktual dikurangi jam terjadwal per-pegawai (median jam masuk pada hari tepat waktu; toleransi ${m.grace_min} menit). Tanda <b>est</b> = pegawai tanpa hari tepat-waktu sebagai acuan, memakai standar unit ${m.sched_start}. Headline keterlambatan memakai <b>median</b> (tahan outlier); rata-rata = ${m.mean_delay} mnt.</div>`;
+  <div class="note"><b>Catatan metodologi.</b> Data direkonstruksi dari <i>Laporan Harian</i> (status resmi sistem) dan <i>Rekap Jam</i> (jam transaksi). Status hadir/telat/absen mengikuti penandaan sistem presensi. Menit keterlambatan dihitung dari jam masuk aktual dikurangi jam terjadwal per-pegawai (median jam masuk pada hari tepat waktu; toleransi ${m.grace_min} menit). Tanda <b>est</b> = pegawai tanpa hari tepat-waktu sebagai acuan, memakai standar unit ${m.sched_start}. Headline keterlambatan memakai <b>median</b> (tahan outlier); rata-rata periode = ${m.mean_delay} mnt. Kartu bertanda <i>periode</i> selalu dihitung untuk seluruh periode, bukan tanggal terpilih.</div>`;
   $('#content').innerHTML=html;
   buildTrend('late'); buildDonut(); buildStack(); buildRemuMini(); buildHeatmap();
-  buildLateToday(); buildTopIssues(); buildLowScore();
+  buildLateToday(); buildTopIssues();
   try{ $$('#kpis .k-val').forEach(el=>animate(el,+el.dataset.to,900,+el.dataset.dec||0)); }
   catch(e){ $$('#kpis .k-val').forEach(el=>{el.textContent=(+el.dataset.dec? (+el.dataset.to).toFixed(+el.dataset.dec).replace('.',','):(+el.dataset.to).toLocaleString('id-ID'));}); }
   $$('[data-tr]').forEach(b=>b.onclick=()=>{$$('[data-tr]').forEach(x=>x.classList.remove('on'));b.classList.add('on');buildTrend(b.dataset.tr);});
+}
+/* KPI menyesuaikan tanggal terpilih; yang bersifat periode tetap periode */
+function kpiScope(){
+  const d=focusDay(),k=DATA.kpi,dl=scopeDelays();
+  return {total_emp:k.total_emp,
+    present:DATA.employees.filter(e=>['hadir','telat'].includes(e.daycat[String(d)])).length,
+    late:DATA.employees.filter(e=>e.daycat[String(d)]==='telat').length,
+    score:k.attn_score_avg,exceed:k.exceed_late,
+    median:dl.length?Math.round(median(dl)*10)/10:0,
+    tag:SEL_DAY?scopeShort():'Hari Ini'};
 }
 function kpiCard(ic,cls,val,lab,trend,sub,dec){
   const tr=trend?`<div class="k-trend ${trend==='up'?'t-up':'t-down'}"><i data-lucide="${trend==='up'?'trending-up':'trending-down'}"></i></div>`:'';
@@ -477,32 +500,35 @@ function kpiCard(ic,cls,val,lab,trend,sub,dec){
     <div class="k-lab">${lab}${sub?' · '+sub:''}</div></div>`;
 }
 function buildTrend(mode){
-  const d=DATA.daily.filter(x=>x.hadir+x.telat+x.sakit+x.izin+x.cuti+x.dinas+x.alpha>0);
-  const labels=d.map(x=>dayShort(x));
+  const d=scopeDays();
+  const labels=d.map(x=>DATA.meta.day_axis[x.day-1]||('Hari '+x.day));
   const vals=d.map(x=> mode==='late'? x.late_count : x.hadir+x.telat);
+  const single=d.length<=2;
   const col=mode==='late'?'#F59E0B':'#16A34A';
   charts.trend&&charts.trend.destroy();
   const ctx=$('#cTrend'); const g=ctx.getContext('2d').createLinearGradient(0,0,0,260);
   g.addColorStop(0,col+'40');g.addColorStop(1,col+'00');
   charts.trend=new Chart(ctx,{type:'line',data:{labels,datasets:[{data:vals,borderColor:col,backgroundColor:g,
-    fill:true,tension:.42,borderWidth:2.5,pointRadius:0,pointHoverRadius:6,pointHoverBackgroundColor:col,
+    fill:true,tension:.42,borderWidth:2.5,pointRadius:single?7:0,pointBackgroundColor:col,pointBorderColor:'#fff',pointBorderWidth:2,pointHoverRadius:8,pointHoverBackgroundColor:col,
     pointHoverBorderColor:'#fff',pointHoverBorderWidth:2}]},
     options:baseOpts({y:{beginAtZero:true,grid:{color:'#F1F5F9'},ticks:{precision:0,color:'#94A3B8',font:{size:11}}},
       x:{grid:{display:false},ticks:{color:'#94A3B8',font:{size:10.5},maxRotation:0}}})});
 }
 function buildDonut(){
   const tot={};Object.keys(CAT_META).forEach(c=>tot[c]=0);
-  DATA.daily.forEach(d=>Object.keys(CAT_META).forEach(c=>tot[c]+=d[c]));
+  scopeDays().forEach(d=>Object.keys(CAT_META).forEach(c=>tot[c]+=d[c]));
   const keys=Object.keys(tot).filter(c=>tot[c]>0);
+  const total=keys.reduce((a,c)=>a+tot[c],0)||1;
   charts.donut=new Chart($('#cDonut'),{type:'doughnut',data:{labels:keys.map(c=>CAT_META[c].lab),
     datasets:[{data:keys.map(c=>tot[c]),backgroundColor:keys.map(c=>CAT_META[c].c),borderWidth:3,borderColor:'#fff',hoverOffset:8}]},
-    options:{cutout:'68%',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:tt()}}});
-  const total=keys.reduce((a,c)=>a+tot[c],0);
-  $('#donutLegend').innerHTML=keys.map(c=>`<div class="lg"><i style="background:${CAT_META[c].c}"></i>${CAT_META[c].lab} <b style="color:var(--ink);margin-left:2px">${Math.round(tot[c]/total*100)}%</b></div>`).join('');
+    options:{cutout:'68%',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
+      tooltip:{...tt(),callbacks:{label:c=>` ${c.label}: ${c.raw} (${Math.round(c.raw/total*100)}%)`}}}}});
+  // legend: hanya keterangan warna, tanpa persentase
+  $('#donutLegend').innerHTML=keys.map(c=>`<div class="lg"><i style="background:${CAT_META[c].c}"></i>${CAT_META[c].lab}</div>`).join('');
 }
 function buildStack(){
-  const d=DATA.daily.filter(x=>x.hadir+x.telat+x.sakit+x.izin+x.cuti+x.dinas+x.alpha>0);
-  const labels=d.map(x=>dayShort(x));
+  const d=scopeDays();
+  const labels=d.map(x=>DATA.meta.day_axis[x.day-1]||('Hari '+x.day));
   const order=['hadir','telat','sakit','izin','cuti','dinas','alpha'];
   charts.stack=new Chart($('#cStack'),{type:'bar',data:{labels,
     datasets:order.map(c=>({label:CAT_META[c].lab,data:d.map(x=>x[c]),backgroundColor:CAT_META[c].c,
@@ -512,11 +538,18 @@ function buildStack(){
 }
 function buildRemuMini(){
   const emp=EMP();
-  const agg={sakit:sum(emp,'sakit_days'),izin:sum(emp,'izin'),cuti:sum(emp,'cuti_days'),
-    alpha:sum(emp,'absen'),telat:sum(emp,'late'),dinas:sum(emp,'dluar')};
-  const rows=[['Sakit',agg.sakit,'hari',CAT_META.sakit.c],['Izin',agg.izin,'kali',CAT_META.izin.c],
-    ['Cuti tahunan',agg.cuti,'hari',CAT_META.cuti.c],['Tanpa keterangan',agg.alpha,'kali',CAT_META.alpha.c],
-    ['Keterlambatan berulang',agg.telat,'kali',CAT_META.telat.c],['Dinas luar',agg.dinas,'kali',CAT_META.dinas.c]];
+  let agg;
+  if(SEL_DAY){ // hitung status pada tanggal terpilih
+    const c=k=>emp.filter(e=>e.daycat[String(SEL_DAY)]===k).length;
+    agg={sakit:c('sakit'),izin:c('izin'),cuti:c('cuti'),alpha:c('alpha'),telat:c('telat'),dinas:c('dinas')};
+  }else{
+    agg={sakit:sum(emp,'sakit_days'),izin:sum(emp,'izin'),cuti:sum(emp,'cuti_days'),
+      alpha:sum(emp,'absen'),telat:sum(emp,'late'),dinas:sum(emp,'dluar')};
+  }
+  const U=SEL_DAY?'pegawai':'';
+  const rows=[['Sakit',agg.sakit,SEL_DAY?U:'hari',CAT_META.sakit.c],['Izin',agg.izin,SEL_DAY?U:'kali',CAT_META.izin.c],
+    ['Cuti tahunan',agg.cuti,SEL_DAY?U:'hari',CAT_META.cuti.c],['Tanpa keterangan',agg.alpha,SEL_DAY?U:'kali',CAT_META.alpha.c],
+    [SEL_DAY?'Terlambat':'Keterlambatan berulang',agg.telat,SEL_DAY?U:'kali',CAT_META.telat.c],['Dinas luar',agg.dinas,SEL_DAY?U:'kali',CAT_META.dinas.c]];
   $('#remuMini').innerHTML=rows.map(r=>`<div class="remu-row"><div class="rl"><i style="background:${r[3]}"></i>${r[0]}</div>
     <div class="rv">${r[1]} <small>${r[2]}</small></div></div>`).join('')+
     `<div class="remu-row" style="border-top:2px solid var(--line);margin-top:4px;padding-top:12px">
@@ -524,10 +557,12 @@ function buildRemuMini(){
       <div class="rv" style="font-size:16px;color:${scoreColor(DATA.kpi.attn_score_avg)}">${DATA.kpi.attn_score_avg.toString().replace('.',',')}</div></div>`;
 }
 function buildHeatmap(){
-  const hours=[...new Set(DATA.heat.map(h=>h.hour))].sort((a,b)=>a-b);
+  const HEAT=scopeHeat();
+  const hours=[...new Set(HEAT.map(h=>h.hour))].sort((a,b)=>a-b);
   const days=[0,1,2,3,4,5];
-  const max=Math.max(...DATA.heat.map(h=>h.n),1);
-  const get=(w,h)=>{const c=DATA.heat.find(x=>x.wd===w&&x.hour===h);return c?c.n:0;};
+  const max=Math.max(...HEAT.map(h=>h.n),1);
+  const get=(w,h)=>{const c=HEAT.find(x=>x.wd===w&&x.hour===h);return c?c.n:0;};
+  if(!hours.length){$('#heatmap').innerHTML='<p style="color:var(--faint);font-size:12.5px;padding:6px 2px">Tidak ada keterlambatan dengan jam masuk tercatat pada rentang ini.</p>';return;}
   let html=`<div class="heat-head" style="--cols:${hours.length}"><span></span>${hours.map(h=>`<span>${h}:00</span>`).join('')}</div><div class="heat">`;
   days.forEach(w=>{
     html+=`<div class="heat-row" style="--cols:${hours.length}"><div class="heat-lab">${WD[w]}</div>`;
@@ -539,8 +574,10 @@ function buildHeatmap(){
   $('#heatmap').innerHTML=html;
 }
 function buildLateToday(){
-  const emp=EMP().filter(e=>e.daycat&&e.daycat[String(DATA.meta.latest_day)]==='telat');
-  const rows=emp.map(e=>({e,tin:e.in17||'—',dl:e.in17?delayFrom(e,e.in17):null})).sort((a,b)=>(b.dl||0)-(a.dl||0));
+  const day=focusDay();
+  const emp=EMP().filter(e=>e.daycat&&e.daycat[String(day)]==='telat');
+  const rows=emp.map(e=>{const t=e.timeline[day-1];
+    return {e,tin:(t&&t.in)||'—',dl:t?t.delay:null};}).sort((a,b)=>(b.dl||0)-(a.dl||0));
   renderTable('lateToday',[['Pegawai','name'],['Jam Masuk','tin'],['Telat','dl'],['Status','st'],['Skor','sc']],
     rows.map(r=>({name:empCell(r.e),tin:`<span class="mono">${r.tin}</span>`,
       dl:r.dl!=null?`<span class="mono" style="color:${r.dl>20?'#EF4444':'#B45309'}">${r.dl} mnt</span>`:'—',
@@ -550,7 +587,9 @@ function buildLateToday(){
 function delayFrom(e,tstr){const cm=tmin(tstr);let base=e.baseline_est?450:tmin(e.baseline_str);const d=cm-base;return d>0?d:0;}
 const tmin=t=>{const p=t.replace('*','').split(':');return (+p[0])*60+(+p[1]);};
 function buildTopIssues(){
-  const emp=EMP().filter(e=>e.total_delay>0).sort((a,b)=>b.total_delay-a.total_delay).slice(0,7);
+  const emp=EMP().map(e=>{const s=scopeDelayBy(e);return {...e,total_delay:s.sum,late:s.n};})
+    .filter(e=>e.total_delay>0).sort((a,b)=>b.total_delay-a.total_delay).slice(0,7);
+  if(!emp.length){$('#topIssues').innerHTML='<p style="color:var(--faint);font-size:12.5px">Tidak ada keterlambatan pada rentang ini.</p>';return;}
   const max=emp[0]?emp[0].total_delay:1;
   $('#topIssues').innerHTML=emp.map((e,i)=>`
     <div class="issue ${i<3?'top'+(i+1):''}" onclick="openEmp(${e.no})" style="cursor:pointer">
@@ -559,14 +598,6 @@ function buildTopIssues(){
         <div class="bar"><i style="width:${e.total_delay/max*100}%"></i></div></div>
       <div class="i-val"><b>${e.total_delay}</b><small>mnt · ${e.late}x telat</small></div></div>`).join('');
 }
-function buildLowScore(){
-  const emp=EMP().sort((a,b)=>a.score-b.score).slice(0,6);
-  renderTable('lowScore',[['Pegawai','name'],['Absen','ab'],['Telat','lt'],['Skor','sc']],
-    emp.map(e=>({name:empCell(e),ab:e.absen?badge(e.absen+'x','b-dg'):'<span class="badge b-gray">0</span>',
-      lt:`<span class="mono">${e.late}x</span>`,sc:scoreBar(e.score),_click:e.no,
-      _sortk:{ab:e.absen,lt:e.late,sc:e.score}})));
-}
-
 /* ---------------- DAILY MONITORING ---------------- */
 function renderDaily(){
   const days=DATA.daily.filter(d=>d.hadir+d.telat+d.sakit+d.izin+d.cuti+d.dinas+d.alpha>0);
@@ -575,7 +606,7 @@ function renderDaily(){
     <div class="filter-bar"><span style="font-size:12.5px;font-weight:700;color:var(--muted)">Pilih hari:</span>${opts}</div>
     <div class="grid g-2-1">
       <div class="card"><div class="card-h"><div><h3 id="dayTitle"></h3><p id="daySub"></p></div>
-        <button class="chip" onclick="exportTable('dayTbl','Kehadiran_Harian')"><i data-lucide="download"></i>CSV</button></div>
+        <button class="chip" onclick="exportDayCSV()"><i data-lucide="download"></i>CSV</button></div>
         <div class="tbl-scroll"><table id="dayTbl"></table></div></div>
       <div class="card"><div class="card-h"><div><h3>Komposisi Hari Ini</h3></div></div>
         <div class="canvas-wrap sm"><canvas id="cDay"></canvas></div><div class="legend" id="dayLegend"></div></div>
@@ -584,6 +615,7 @@ function renderDaily(){
   const last=days[days.length-1].day; $(`[data-day="${last}"]`).classList.add('on');showDay(last);
 }
 function showDay(day){
+  curDay=day;
   const drec=DATA.daily[day-1];const emp=EMP();
   $('#dayTitle').textContent='Detail '+dayLong(day);
   const present=emp.filter(e=>['hadir','telat'].includes(e.daycat[String(day)]));
@@ -716,7 +748,7 @@ function renderEmpDetail(no){
   const e=EMP().find(x=>x.no===no);if(!e)return;
   const sc=scoreColor(e.score),circ=2*Math.PI*42,off=circ*(1-e.score/100);
   const catCount={};Object.keys(CAT_META).forEach(c=>catCount[c]=e[c+'_days']||0);
-  $('#pageTitle').childNodes[0].textContent='Profil Pegawai';$('#pageSub').textContent=e.name;
+  $('#pageTitle').textContent='Profil Pegawai';
   $('#content').innerHTML=`
     <button class="back-btn" onclick="curEmp=null;nav('profile')"><i data-lucide="arrow-left"></i>Kembali ke daftar</button>
     <div class="card">
@@ -780,10 +812,10 @@ function renderReports(){
   $('#content').innerHTML=`
    <div class="section-title"><i data-lucide="download"></i>Ekspor & Unduh</div>
    <div class="grid g-1-1">
-    ${repCard('file-down','Laporan Harian (PDF)','Tangkapan ringkasan dashboard dalam format PDF siap cetak untuk kepala puskesmas.','exportPDF','ic-dg')}
-    ${repCard('table','Rekap Kehadiran (CSV)','Data lengkap seluruh pegawai: hadir, telat, absen, izin, poin, siap diolah di Excel/R.','exportCSV','ic-em')}
-    ${repCard('image-down','Tangkapan Dashboard (PNG)','Gambar resolusi tinggi dari tampilan dashboard aktif untuk presentasi.','exportPNG','ic-sky')}
-    ${repCard('coins','Poin Remunerasi (CSV)','Ekspor tabel poin kehadiran sesuai rubrik kebijakan yang aktif.','gotoRemu','ic-lime')}
+    ${repCard('file-down','Laporan Harian (PDF)','exportPDF','ic-dg')}
+    ${repCard('table','Rekap Kehadiran (CSV)','exportCSV','ic-em')}
+    ${repCard('image-down','Tangkapan Dashboard (PNG)','exportPNG','ic-sky')}
+    ${repCard('coins','Poin Kehadiran (CSV)','gotoRemu','ic-lime')}
    </div>
    <div class="card" style="margin-top:16px"><div class="card-h"><div><h3>Ringkasan Periode</h3><p>${DATA.meta.period_start} – ${DATA.meta.period_end} · ${DATA.meta.unit}</p></div></div>
      <div class="mini-grid" style="grid-template-columns:repeat(4,1fr)">
@@ -793,11 +825,10 @@ function renderReports(){
   lucide.createIcons();
 }
 function gotoRemu(){nav('remu');}
-function repCard(ic,t,d,fn,cls){
-  return `<div class="card" style="display:flex;gap:16px;align-items:flex-start">
+function repCard(ic,t,fn,cls){
+  return `<div class="card" style="display:flex;gap:16px;align-items:center">
     <div class="k-ic ${cls}" style="width:44px;height:44px;flex:0 0 44px"><i data-lucide="${ic}"></i></div>
-    <div style="flex:1"><h3 style="font-size:14.5px;font-weight:800">${t}</h3>
-    <p style="font-size:12.5px;color:var(--muted);margin:6px 0 12px;line-height:1.5">${d}</p>
+    <div style="flex:1"><h3 style="font-size:14.5px;font-weight:800;margin-bottom:10px">${t}</h3>
     <button class="chip on" onclick="${fn}()"><i data-lucide="download"></i>Unduh</button></div></div>`;
 }
 
@@ -830,8 +861,9 @@ function tt(){return{backgroundColor:'#0F172A',padding:11,cornerRadius:10,titleF
 const sum=(arr,k)=>arr.reduce((a,e)=>a+(e[k]||0),0);
 function dayShort(o){const d=o.day!=null?o.day:o.d;
   return DATA.meta.has_date? (d+' '+WD[o.wd]) : ('H'+d);}
-function dayLong(d){const L=DATA.meta.day_labels||[];
+function dayLong(d){const L=DATA.meta.day_full||[];
   return DATA.meta.has_date? (L[d-1]||('Hari '+d)) : ('Hari '+d);}
+function dayISO(d){const L=DATA.meta.day_iso||[];return L[d-1]||('H'+d);}
 const shortName=n=>{const p=n.split(' ');return p[0].length>9?p[0].slice(0,9):p[0];};
 function empCell(e){return `<div class="emp-cell"><div class="emp-av" style="background:${avatarColor(e.no)}">${initials(e.name)}</div>
   <div><b>${e.name}</b><small>#${e.no}${e.baseline_est?' · est':''}</small></div></div>`;}
@@ -857,6 +889,30 @@ function renderTable(id,cols,rows,defSort){
 const txt=h=>{const d=document.createElement('div');d.innerHTML=h||'';return d.textContent.trim().toLowerCase();};
 
 /* ================= EXPORTS ================= */
+/* ---- Ekspor CSV dengan kolom: Nama | Puskesmas | Tanggal | Jam hadir | Menit terlambat ---- */
+function csvDownload(head,rows,fname){
+  const esc=v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`;
+  const body=[head.map(esc).join(','),...rows.map(r=>r.map(esc).join(','))].join('\n');
+  dl(fname+'.csv',body); toast('CSV diunduh: '+fname);
+}
+const KOLOM_TELAT=['Nama','Puskesmas','Tanggal','Jam hadir','Menit terlambat'];
+function rowsForDay(day,onlyLate){
+  return DATA.employees.filter(e=>{const c=e.daycat[String(day)];return onlyLate? c==='telat' : !!c;})
+    .map(e=>{const t=e.timeline[day-1];
+      return [e.name,DATA.meta.unit,dayISO(day),(t&&t.in)||'',(t&&t.delay!=null)?t.delay:0];})
+    .sort((a,b)=>b[4]-a[4]||String(a[0]).localeCompare(b[0]));
+}
+function exportLateCSV(){
+  const day=focusDay(),rows=rowsForDay(day,true);
+  if(!rows.length)return toast('Tidak ada keterlambatan pada tanggal ini');
+  csvDownload(KOLOM_TELAT,rows,'Terlambat_'+dayISO(day));
+}
+function exportDayCSV(){
+  const day=curDay||focusDay(),rows=rowsForDay(day,false);
+  if(!rows.length)return toast('Tidak ada data pada tanggal ini');
+  csvDownload(KOLOM_TELAT,rows,'Kehadiran_'+dayISO(day));
+}
+
 function dl(name,content,type='text/csv;charset=utf-8'){
   const blob=new Blob(['\ufeff'+content],{type});const u=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);
@@ -911,6 +967,48 @@ function initSearch(){
 function pickSearch(no){$('#globalSearch').value='';$('#searchDrop').classList.remove('show');openEmp(no);}
 
 
+
+/* ================= LINGKUP TANGGAL (pemilih di kanan atas) ================= */
+const hasAny=d=>['hadir','telat','sakit','izin','cuti','dinas','alpha'].reduce((a,c)=>a+d[c],0)>0;
+const activeDays=()=>DATA.daily.filter(hasAny);
+function scopeDays(){ return SEL_DAY? DATA.daily.filter(d=>d.day===SEL_DAY) : activeDays(); }
+const inScope=d=>SEL_DAY? d===SEL_DAY : true;
+const focusDay=()=>SEL_DAY||DATA.meta.latest_day;
+function scopeLabel(){ return SEL_DAY? dayLong(SEL_DAY) : (DATA.meta.period_start+' – '+DATA.meta.period_end); }
+function scopeShort(){ return SEL_DAY? (DATA.meta.day_axis[SEL_DAY-1]||('Hari '+SEL_DAY)) : 'periode'; }
+/* semua keterlambatan dalam lingkup terpilih */
+function scopeDelays(){const out=[];DATA.employees.forEach(e=>e.timeline.forEach(t=>{
+  if(inScope(t.d)&&t.delay!=null)out.push(t.delay);}));return out;}
+function scopeHeat(){const h={};DATA.employees.forEach(e=>e.timeline.forEach(t=>{
+  if(inScope(t.d)&&t.delay!=null&&t.hour!=null){const k=t.wd+'|'+t.hour;h[k]=(h[k]||0)+1;}}));
+  return Object.entries(h).map(([k,n])=>({wd:+k.split('|')[0],hour:+k.split('|')[1],n})).sort((a,b)=>a.wd-b.wd||a.hour-b.hour);}
+function scopeDelayBy(e){let s=0,n=0;e.timeline.forEach(t=>{if(inScope(t.d)&&t.delay!=null){s+=t.delay;n++;}});return{sum:s,n};}
+
+function renderDatePicker(){
+  const list=$('#dateList'); if(!list||!DATA)return;
+  const days=activeDays();
+  let h=`<div class="dp-item ${SEL_DAY?'':'on'}" data-d="all">Seluruh periode
+    <small>${days.length} hari</small></div><div class="dp-sep"></div>`;
+  h+=days.map(d=>`<div class="dp-item ${SEL_DAY===d.day?'on':''}" data-d="${d.day}">
+      ${DATA.meta.day_axis[d.day-1]||('Hari '+d.day)}<small>${DATA.meta.day_dow[d.day-1]||''}</small></div>`).join('');
+  list.innerHTML=h;
+  list.querySelectorAll('.dp-item').forEach(it=>it.onclick=()=>{
+    SEL_DAY = it.dataset.d==='all'? null : +it.dataset.d;
+    $('#datePanel').classList.remove('show');
+    syncPill(); renderDatePicker();
+    nav(curView);
+    toast(SEL_DAY? ('Menampilkan '+dayLong(SEL_DAY)) : 'Menampilkan seluruh periode');
+  });
+}
+function syncPill(){
+  const p=$('#periodPill'); if(!p||!DATA)return;
+  p.textContent = SEL_DAY? dayLong(SEL_DAY) : (DATA.meta.period_start+' – '+DATA.meta.period_end);
+}
+function toggleDate(force){
+  const p=$('#datePanel'); if(!p)return;
+  const show=force!==undefined?force:!p.classList.contains('show');
+  if(show){renderDatePicker();p.classList.add('show');} else p.classList.remove('show');
+}
 
 /* ================= NOTIFIKASI ================= */
 function fmtStamp(raw){
@@ -969,8 +1067,8 @@ function csvParse(text){
   if(cur!==''||row.length){row.push(cur);rows.push(row);}
   return rows.filter(r=>r.length&&!(r.length===1&&r[0]===''));
 }
-async function fetchTab(name){
-  const url=`https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:csv&headers=0&sheet=${encodeURIComponent(name)}&t=${Date.now()}`;
+async function fetchTab(name,hdr){
+  const url=`https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:csv&headers=${hdr}&sheet=${encodeURIComponent(name)}&t=${Date.now()}`;
   const r=await fetch(url);
   if(!r.ok)throw new Error(`Tab "${name}" tidak bisa diambil (HTTP ${r.status})`);
   const t=await r.text();
@@ -994,6 +1092,7 @@ const m2hhmm=v=>`${String(Math.floor(v/60)).padStart(2,'0')}:${String(Math.round
 const median=a=>{if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y),m=s.length>>1;
   return s.length%2?s[m]:(s[m-1]+s[m])/2;};
 const IDN_BULAN=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const IDN_BULAN_FULL=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const IDN_HARI=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
 
 
@@ -1038,7 +1137,22 @@ function parseYMD(v){
 
 function derive(metaRows,pegRows,jamRows){
   const M=readMeta(metaRows);
-  const nd=+M.jumlah_hari||17;
+  const H=(pegRows[0]||[]).map(x=>String(x).trim());
+  /* Google kadang mengosongkan LABEL header pada kolom bertipe angka.
+     Karena tata letak tab Pegawai selalu:
+       No, Nama, Jam_Acuan, Acuan_Estimasi, H1..Hn, Normal, Riil, Absen, Telat,
+       Plg_Cepat, Lembur, Izin, Dinas_Luar
+     maka indeks kolom dihitung dari posisi bila namanya hilang. */
+  const hCount=H.filter(x=>/^H\d+$/.test(x)).length;
+  const rowLen=Math.max(H.length,...pegRows.slice(1).map(r=>r.length));
+  const ndRaw=hCount>0?hCount:(rowLen-12>0?rowLen-12:(+M.jumlah_hari||17));
+  const SUMCOL=['Normal','Riil','Absen','Telat','Plg_Cepat','Lembur','Izin','Dinas_Luar'];
+  const CMAP={};SUMCOL.forEach((n,i)=>{const j=H.indexOf(n);CMAP[n]=j>=0?j:(4+ndRaw+i);});
+  const idx=n=>CMAP[n]!=null?CMAP[n]:H.indexOf(n);
+  const hIdx=d=>{const j=H.indexOf('H'+d);return j>=0?j:(3+d);};
+  const jamH=jamRows.length?jamRows[0].map(x=>String(x).trim()):[];
+  const jIdx=d=>{const j=jamH.indexOf('H'+d);return j>=0?j:(1+d);};
+  const nd=ndRaw;
   const start=parseYMD(M.periode_mulai);
   const dateOf=d=>start?new Date(start.getTime()+(d-1)*86400000):null;
   const ok=!!start;
@@ -1047,8 +1161,7 @@ function derive(metaRows,pegRows,jamRows){
   const wd=d=>(jsW(d)+6)%7;                       // 0=Senin (dipakai chart & heatmap)
   const stdBase=t2m(M.jam_masuk_standar||'07:30');
 
-  const H=pegRows[0].map(x=>x.trim()), idx=n=>H.indexOf(n);
-  const jamH=jamRows.length?jamRows[0].map(x=>x.trim()):[];
+
   const jamBy={};jamRows.slice(1).forEach(r=>{if(r[0]!=='')jamBy[+r[0]]=r;});
 
   const CATS=['hadir','telat','sakit','izin','cuti','dinas','alpha'];
@@ -1059,8 +1172,8 @@ function derive(metaRows,pegRows,jamRows){
     if(!r[0]||!r[1])return;
     const no=+r[0],name=r[1].trim();
     const jr=jamBy[no]||[];
-    const getIn=d=>{const i=jamH.indexOf('H'+d);return i>=0?(jr[i]||'').trim():'';};
-    const stOf=d=>{const i=idx('H'+d);return i>=0?(r[i]||'').trim():'';};
+    const getIn=d=>{const i=jIdx(d);return i>=0?String(jr[i]||'').trim():'';};
+    const stOf=d=>{const i=hIdx(d);return i>=0?String(r[i]||'').trim():'';};
 
     // acuan jam masuk: median jam masuk pada hari berstatus tepat waktu (N)
     const onTime=[];
@@ -1071,23 +1184,33 @@ function derive(metaRows,pegRows,jamRows){
     const daycat={},timeline=[];let tot=0,inst=0;
     for(let d=1;d<=nd;d++){
       const c=CAT_OF(stOf(d)),cin=getIn(d)||null;
-      daycat[String(d)]=c;timeline.push({d,wd:wd(d),cat:c,in:cin});
+      let dl=null;
+      if(c==='telat'){
+        const cm=t2m(cin);
+        if(cm!==null){const x=cm-base;if(x>0&&x<300)dl=x;}
+      }
+      daycat[String(d)]=c;timeline.push({d,wd:wd(d),cat:c,in:cin,delay:dl,hour:t2m(cin)!==null?Math.floor(t2m(cin)/60):null});
       if(c){daily[d-1][c]++;}
       if(c==='telat'){
         daily[d-1].late_count++;
-        const cm=t2m(cin);
-        if(cm!==null){const dl=cm-base;
-          if(dl>0&&dl<300){tot+=dl;inst++;allDelays.push(dl);
-            const k=wd(d)+'|'+Math.floor(cm/60);heat[k]=(heat[k]||0)+1;}}
+        if(dl!==null){tot+=dl;inst++;allDelays.push(dl);
+          const k=wd(d)+'|'+timeline[d-1].hour;heat[k]=(heat[k]||0)+1;}
       }
     }
+    const cell=n=>{const i=idx(n);return i>=0?String(r[i]==null?'':r[i]).trim():'';};
+    const num=n=>{const v=cell(n).replace(',','.');return v===''?null:(isNaN(+v)?null:+v);};
+    const cnt=c=>Object.values(daycat).filter(x=>x===c).length;
     const e={no,name,daycat,timeline,
       baseline_est:est,baseline_str:m2hhmm(base),
       total_delay:tot,late_inst:inst,avg_delay:inst?Math.round(tot/inst*10)/10:0,
-      normal:+r[idx('Normal')]||0,riil:+r[idx('Riil')]||0,absen:+r[idx('Absen')]||0,
-      late:+r[idx('Telat')]||0,early:+r[idx('Plg_Cepat')]||0,ot:+r[idx('Lembur')]||0,
-      izin:+r[idx('Izin')]||0,dluar:+r[idx('Dinas_Luar')]||0};
-    CATS.forEach(c=>e[c+'_days']=Object.values(daycat).filter(x=>x===c).length);
+      normal:num('Normal')||0,riil:num('Riil')||0,
+      /* kolom rekap dipakai bila ada; bila hilang, dihitung dari status harian */
+      absen:num('Absen')!=null?num('Absen'):cnt('alpha'),
+      late:num('Telat')!=null?num('Telat'):cnt('telat'),
+      early:num('Plg_Cepat')||0,ot:num('Lembur')||0,
+      izin:num('Izin')!=null?num('Izin'):cnt('izin'),
+      dluar:num('Dinas_Luar')!=null?num('Dinas_Luar'):cnt('dinas')};
+    CATS.forEach(c=>e[c+'_days']=cnt(c));
     employees.push(e);
   });
 
@@ -1103,6 +1226,13 @@ function derive(metaRows,pegRows,jamRows){
   return {
     meta:{unit:M.unit||'Puskesmas Suranadi',
       has_date:ok,day_labels:Array.from({length:nd},(_,i)=>ok?fmt(dateOf(i+1)):('Hari '+(i+1))),
+      day_axis:Array.from({length:nd},(_,i)=>{const dt=ok?dateOf(i+1):null;
+        return dt?(dt.getDate()+' '+IDN_BULAN_FULL[dt.getMonth()]):('Hari '+(i+1));}),
+      day_dow:Array.from({length:nd},(_,i)=>ok?IDN_HARI[dateOf(i+1).getDay()]:''),
+      day_full:Array.from({length:nd},(_,i)=>{const dt=ok?dateOf(i+1):null;
+        return dt?(dt.getDate()+' '+IDN_BULAN_FULL[dt.getMonth()]+' '+dt.getFullYear()):('Hari '+(i+1));}),
+      day_iso:Array.from({length:nd},(_,i)=>{const dt=ok?dateOf(i+1):null;
+        return dt?(dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0')):('H'+(i+1));}),
       period_start:ok?fmt(start):('Hari 1'),period_end:ok?fmt(endDt):('Hari '+nd),
       latest_day:last,latest_date:ok?`${IDN_HARI[lastDt.getDay()]}, ${fmt(lastDt)}`:('Hari '+last),
       n_emp:employees.length,sched_start:M.jam_masuk_standar||'07:30',
@@ -1140,10 +1270,11 @@ async function loadData(silent){
   }
   if(!silent)showState('load','Memuat data…','Mengambil data terbaru dari Google Sheet.');
   try{
-    const [m,p,j]=await Promise.all([fetchTab('Meta'),fetchTab('Pegawai'),fetchTab('JamMasuk').catch(()=>[[]])]);
+    const [m,p,j]=await Promise.all([fetchTab('Meta',0),fetchTab('Pegawai',1),fetchTab('JamMasuk',1).catch(()=>[[]])]);
     if(p.length<2)throw new Error('Tab "Pegawai" masih kosong. Jalankan notebook Colab terlebih dahulu.');
     DATA=derive(m,p,j);
-    $('#periodPill').textContent=`${DATA.meta.period_start} – ${DATA.meta.period_end}`;
+    if(SEL_DAY&&SEL_DAY>DATA.meta.latest_day)SEL_DAY=null;
+    syncPill(); renderDatePicker();
     const u=$('#lastUpd');if(u)u.textContent=DATA.meta.updated?('Data per '+fmtStamp(DATA.meta.updated)):'';
     if(DATA.meta.updated&&DATA.meta.updated!==lastStamp){
       if(lastStamp!==null){const d=$('#notifDot');if(d)d.style.display='';toast('Data kehadiran baru saja diperbarui');}
@@ -1164,6 +1295,8 @@ window.addEventListener('DOMContentLoaded',()=>{
   $('#collapseBtn').onclick=()=>$('#side').classList.toggle('collapsed');
   $('#fabMain').onclick=()=>$('#fab').classList.toggle('open');
   document.addEventListener('click',e=>{if(!$('#fab').contains(e.target))$('#fab').classList.remove('open');});
+  $('#dateBtn').onclick=e=>{e.stopPropagation();toggleDate();};
+  document.addEventListener('click',e=>{if(!e.target.closest('.date-wrap'))toggleDate(false);});
   $('#notifBtn').onclick=e=>{e.stopPropagation();toggleNotif();};
   $('#notifClose').onclick=e=>{e.stopPropagation();toggleNotif(false);};
   document.addEventListener('click',e=>{if(!e.target.closest('.notif-wrap'))toggleNotif(false);});
