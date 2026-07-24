@@ -635,10 +635,11 @@ function showDay(day){
   const totD=keys.reduce((a,c)=>a+drec[c],0)||1;
   charts.day=new Chart($('#cDay'),{type:'doughnut',data:{labels:keys.map(c=>CAT_META[c].lab),
     datasets:[{data:keys.map(c=>drec[c]),backgroundColor:keys.map(c=>CAT_META[c].c),borderWidth:3,borderColor:cssv('--card'),hoverOffset:8}]},
-    options:{cutout:'60%',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
-      tooltip:{...tt(),callbacks:{label:c=>` ${c.label}: ${c.raw} (${Math.round(c.raw/totD*100)}%)`}}}},
-    plugins:[arcLabels(totD)]});
-  // legend: keterangan warna saja, angka ditampilkan di dalam chart
+    options:{cutout:'66%',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        /* angka & persentase hanya muncul saat kursor diarahkan ke potongan */
+        tooltip:{...tt(),callbacks:{label:c=>` ${c.label}: ${c.raw} pegawai (${Math.round(c.raw/totD*100)}%)`}}}}});
+  // legend: keterangan warna saja
   $('#dayLegend').innerHTML=keys.map(c=>`<div class="lg"><i style="background:${CAT_META[c].c}"></i>${CAT_META[c].lab}</div>`).join('');
   lucide.createIcons();
 }
@@ -935,26 +936,6 @@ function renderTable(id,cols,rows,defSort){
 const txt=h=>{const d=document.createElement('div');d.innerHTML=h||'';return d.textContent.trim().toLowerCase();};
 
 
-/* Menulis "24 (12%)" di atas tiap potongan donut, tanpa library tambahan.
-   Potongan sangat kecil dilewati agar teks tidak bertumpuk (nilainya tetap ada di tooltip). */
-function arcLabels(total){
-  return {id:'arcLabels',afterDatasetsDraw(chart){
-    const ctx=chart.ctx, meta=chart.getDatasetMeta(0);
-    if(!meta||!meta.data)return;
-    ctx.save();
-    ctx.font='700 11px "Plus Jakarta Sans", Inter, sans-serif';
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    meta.data.forEach((arc,i)=>{
-      const v=chart.data.datasets[0].data[i];if(!v)return;
-      const pct=v/total*100;if(pct<5)return;
-      const p=arc.getCenterPoint?arc.getCenterPoint():null;if(!p)return;
-      const txt=v+' ('+Math.round(pct)+'%)';
-      ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.3)';ctx.strokeText(txt,p.x,p.y);
-      ctx.fillStyle='#fff';ctx.fillText(txt,p.x,p.y);
-    });
-    ctx.restore();
-  }};
-}
 
 /* ================= EXPORTS ================= */
 /* ---- Ekspor CSV dengan kolom: Nama | Puskesmas | Tanggal | Jam hadir | Menit terlambat ---- */
