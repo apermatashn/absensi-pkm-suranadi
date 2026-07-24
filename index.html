@@ -151,6 +151,9 @@ body{font-family:'Plus Jakarta Sans','Inter',system-ui,sans-serif;background:var
 .np-tx b{display:block;font-size:12.8px;font-weight:750;line-height:1.35;margin-bottom:3px}
 .np-tx span{display:block;font-size:11.8px;color:var(--muted);line-height:1.5}
 .np-tx small{display:block;font-size:10.8px;color:var(--faint);font-weight:650;margin-top:4px}
+.tbl-note{margin-top:12px;font-size:11.8px;color:var(--muted);display:flex;gap:7px;align-items:flex-start;line-height:1.5}
+.tbl-note svg{width:14px;height:14px;flex:0 0 14px;margin-top:1px;color:var(--amber)}
+.tbl-note:empty{display:none}
 .content{padding:26px 28px 90px;max-width:1440px;width:100%;margin:0 auto}
 .view{display:none;animation:fade .4s ease}
 .view.active{display:block}
@@ -390,6 +393,7 @@ const CAT_META={
   cuti:{lab:'Cuti',c:'#A8D94A'}, dinas:{lab:'Dinas Luar',c:'#64748B'},
   alpha:{lab:'Tanpa Ket.',c:'#EF4444'}
 };
+const UNREC='<span class="mono" style="color:var(--faint)" title="Jam masuk tidak terekam di mesin presensi">tidak terekam</span>';
 const AVCOL=['#16A34A','#0EA5E9','#8B5CF6','#F59E0B','#EF4444','#A8D94A','#0F766E'];
 let charts={}, sortState={}, curView='dashboard', curEmp=null, lastStamp=null;
 let SEL_FROM=null, SEL_TO=null;   // null = seluruh periode
@@ -473,6 +477,7 @@ function renderDashboard(){
       <div class="card-h"><div><h3>Terlambat</h3><p>${dayLong(focusDay())}</p></div>
         <button class="chip" onclick="exportLateCSV()"><i data-lucide="download"></i>CSV</button></div>
       <div class="tbl-scroll"><table id="lateToday"></table></div>
+      <div id="lateNote" class="tbl-note"></div>
     </div>
     <div class="card">
       <div class="card-h"><div><h3>Isu Kehadiran Teratas</h3><p>Akumulasi menit terlambat · ${scopeLabel()}</p></div></div>
@@ -585,12 +590,17 @@ function buildLateToday(){
   const day=focusDay();
   const emp=EMP().filter(e=>e.daycat&&e.daycat[String(day)]==='telat');
   const rows=emp.map(e=>{const t=e.timeline[day-1];
-    return {e,tin:(t&&t.in)||'—',dl:t?t.delay:null};}).sort((a,b)=>(b.dl||0)-(a.dl||0));
+    return {e,tin:(t&&t.in)||null,dl:t?t.delay:null};}).sort((a,b)=>(b.dl||0)-(a.dl||0));
+  const nRec=rows.filter(r=>!r.tin).length;
   renderTable('lateToday',[['Pegawai','name'],['Jam Masuk','tin'],['Telat','dl'],['Status','st'],['Skor','sc']],
-    rows.map(r=>({name:empCell(r.e),tin:`<span class="mono">${r.tin}</span>`,
-      dl:r.dl!=null?`<span class="mono" style="color:${r.dl>20?'#EF4444':'#B45309'}">${r.dl} mnt</span>`:'—',
+    rows.map(r=>({name:empCell(r.e),tin:r.tin?`<span class="mono">${r.tin}</span>`:UNREC,
+      dl:r.dl!=null?`<span class="mono" style="color:${r.dl>20?'#EF4444':'#B45309'}">${r.dl} mnt</span>`
+        :(r.tin?'<span class="mono" style="color:var(--faint)">0 mnt</span>':UNREC),
       st:badge('Terlambat','b-am','clock'),sc:scoreBar(r.e.score),
-      _click:r.e.no,_sortk:{dl:r.dl||0,sc:r.e.score,tin:tmin(r.tin==='—'?'00:00':r.tin)}})), {dl:'desc'});
+      _click:r.e.no,_sortk:{dl:r.dl||0,sc:r.e.score,tin:r.tin?tmin(r.tin):0}})), {dl:'desc'});
+  const nt=$('#lateNote');
+  if(nt)nt.innerHTML = nRec? `<i data-lucide="info"></i> ${nRec} pegawai tanpa jam masuk terekam di mesin presensi — status mengikuti penandaan sistem, menit keterlambatan tidak dapat dihitung.` : '';
+  lucide.createIcons();
 }
 const tmin=t=>{const p=t.replace('*','').split(':');return (+p[0])*60+(+p[1]);};
 function buildTopIssues(){
@@ -626,7 +636,7 @@ function showDay(day){
   $('#daySub').textContent=`${present.length} hadir · ${drec.telat} terlambat · ${drec.alpha} tanpa keterangan`;
   const rows=emp.filter(e=>e.daycat[String(day)]).map(e=>{
     const c=e.daycat[String(day)];const tl=e.timeline[day-1];
-    return {name:empCell(e),tin:tl.in?`<span class="mono">${tl.in}</span>`:'—',
+    return {name:empCell(e),tin:tl.in?`<span class="mono">${tl.in}</span>`:(['hadir','telat'].includes(c)?UNREC:'—'),
       st:badge(CAT_META[c].lab,catBadge(c)),_click:e.no,_cat:c,_sortk:{st:['telat','alpha','sakit','izin','cuti','dinas','hadir'].indexOf(c)}};
   }).sort((a,b)=>a._sortk.st-b._sortk.st);
   renderTable('dayTbl',[['Pegawai','name'],['Jam Masuk','tin'],['Status','st']],rows);
@@ -953,8 +963,11 @@ const KOLOM_TELAT=['Nama','Puskesmas','Tanggal','Jam hadir','Menit terlambat'];
 function rowsForDay(day,onlyLate){
   return DATA.employees.filter(e=>{const c=e.daycat[String(day)];return onlyLate? c==='telat' : !!c;})
     .map(e=>{const t=e.timeline[day-1];
-      return [e.name,unitShort(),dayISO(day),(t&&t.in)||'',(t&&t.delay!=null)?t.delay:0];})
-    .sort((a,b)=>b[4]-a[4]||String(a[0]).localeCompare(b[0]));
+      const jam=(t&&t.in)||'';
+      /* menit dikosongkan bila jam masuk tidak terekam, supaya tidak terbaca 'tepat waktu' */
+      const mnt=jam? ((t&&t.delay!=null)?t.delay:0) : '';
+      return [e.name,unitShort(),dayISO(day),jam,mnt];})
+    .sort((a,b)=>(+b[4]||0)-(+a[4]||0)||String(a[0]).localeCompare(b[0]));
 }
 function exportLateCSV(){
   const day=focusDay(),rows=rowsForDay(day,true);
@@ -1071,8 +1084,9 @@ function exportPDF(){
           {h:'Jam Masuk',w:56,a:'r'},{h:'Telat (mnt)',w:56,a:'r'},{h:'Status',w:79}];
     rows=emp.filter(e=>e.daycat[String(one)]).map(e=>{const t=e.timeline[one-1];
       const sh=t&&t.shift?SHIFTS[t.shift]:null;
-      return [e.no,e.name,sh?sh.lab:'-',sh?sh.masuk:'-',(t&&t.in)||'-',
-        (t&&t.delay!=null)?t.delay:0,CAT_META[e.daycat[String(one)]].lab];});
+      const jam=(t&&t.in)||'';
+      return [e.no,e.name,sh?sh.lab:'-',sh?sh.masuk:'-',jam||'tdk terekam',
+        jam?((t&&t.delay!=null)?t.delay:0):'-',CAT_META[e.daycat[String(one)]].lab];});
   }else{
     cols=[{h:'No',w:28,a:'r'},{h:'Nama Pegawai',w:168},{h:'Tepat',w:40,a:'r'},{h:'Telat',w:40,a:'r'},
           {h:'Alpa',w:38,a:'r'},{h:'Izin',w:36,a:'r'},{h:'Sakit',w:40,a:'r'},{h:'Cuti',w:36,a:'r'},
