@@ -160,16 +160,20 @@ body{font-family:'Plus Jakarta Sans','Inter',system-ui,sans-serif;background:var
 @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
 /* KPI cards */
-.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;margin-bottom:20px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(184px,1fr));gap:16px;margin-bottom:20px}
+/* Elemen grid WAJIB min-width:0 — tanpa ini konten yang lebih lebar dari kolomnya
+   akan meluber keluar kartu dan tampak "bertumpuk". */
+.grid>*,.kpi-grid>*,.mini-grid>*{min-width:0}
 .kpi{background:var(--card);border-radius:var(--r);padding:18px 18px 16px;box-shadow:var(--sh);
   transition:transform .2s,box-shadow .2s;cursor:default;position:relative;overflow:hidden}
 .kpi:hover{transform:translateY(-3px);box-shadow:var(--sh-hi)}
-.kpi .k-ic{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;margin-bottom:12px}
+.kpi .k-ic{width:36px;height:36px;flex:0 0 36px;border-radius:11px;display:grid;place-items:center}
 .kpi .k-ic svg{width:18px;height:18px}
-.kpi .k-val{font-size:27px;font-weight:800;letter-spacing:-.8px;line-height:1}
+.kpi .k-val{font-size:26px;font-weight:800;letter-spacing:-.8px;line-height:1.05;overflow-wrap:anywhere}
 .kpi .k-val small{font-size:14px;font-weight:700;color:var(--faint);letter-spacing:0}
-.kpi .k-lab{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:5px}
-.kpi .k-trend{position:absolute;top:18px;right:16px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:3px}
+.kpi .k-lab{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:6px;line-height:1.35;min-height:2.7em}
+.kpi .k-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.kpi .k-trend{font-size:11px;font-weight:700;display:flex;align-items:center;gap:3px;flex:0 0 auto}
 .kpi .k-trend svg{width:12px;height:12px}
 .t-up{color:var(--emerald)} .t-down{color:var(--danger)}
 .ic-lime{background:var(--lime);color:var(--lime-ink)}
@@ -185,9 +189,10 @@ body{font-family:'Plus Jakarta Sans','Inter',system-ui,sans-serif;background:var
 .g-1-1{grid-template-columns:1fr 1fr}
 .g-3-2{grid-template-columns:3fr 2fr}
 .g-1-1-1{grid-template-columns:1fr 1fr 1fr}
-.card{background:var(--card);border-radius:var(--r);padding:20px 22px;box-shadow:var(--sh);transition:box-shadow .2s}
+.card{background:var(--card);border-radius:var(--r);padding:20px 22px;box-shadow:var(--sh);transition:box-shadow .2s;min-width:0;overflow:hidden}
 .card:hover{box-shadow:var(--sh-hi)}
-.card-h{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:12px}
+.card-h{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap}
+.card-h>div:first-child{min-width:0;flex:1 1 180px}
 .card-h h3{font-size:14.5px;font-weight:800;letter-spacing:-.2px}
 .card-h p{font-size:11.5px;color:var(--faint);font-weight:600;margin-top:2px}
 .card-h .h-act{display:flex;gap:7px;flex-wrap:wrap}
@@ -205,7 +210,7 @@ body{font-family:'Plus Jakarta Sans','Inter',system-ui,sans-serif;background:var
 .lg i{width:10px;height:10px;border-radius:3px;display:inline-block}
 
 /* Table */
-.tbl-scroll{overflow-x:auto;margin:0 -4px}
+.tbl-scroll{overflow-x:auto;max-width:100%}
 table{width:100%;border-collapse:collapse;font-size:13px}
 thead th{text-align:left;font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.5px;
   padding:8px 12px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none}
@@ -276,7 +281,11 @@ tbody tr:last-child td{border-bottom:none}
 .ring .rt span{font-size:10px;color:var(--faint);font-weight:700}
 .detail-meta h2{font-size:22px;font-weight:800;letter-spacing:-.5px}
 .detail-meta .dm-sub{color:var(--muted);font-weight:600;font-size:13px;margin-top:2px}
-.detail-meta .dm-tags{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.detail-meta .dm-tags{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.dm-hp{display:inline-flex;align-items:center;gap:7px;margin-top:9px;padding:6px 12px;border:1px solid var(--line);
+  border-radius:9px;font-size:12.5px;font-weight:700;color:var(--ink);text-decoration:none;background:var(--hover);transition:.15s}
+.dm-hp:hover{border-color:var(--lime-deep);color:var(--lime-ink);background:var(--lime)}
+.dm-hp svg{width:14px;height:14px;color:var(--emerald,#16A34A)}
 .mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0}
 .mini{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
 .mini b{display:block;font-size:16px;font-weight:800;color:var(--ink);line-height:1.2;letter-spacing:-.3px}
@@ -322,8 +331,8 @@ tbody tr:last-child td{border-bottom:none}
 .section-title{font-size:15px;font-weight:800;letter-spacing:-.3px;margin:6px 0 14px;display:flex;align-items:center;gap:9px}
 .section-title svg{width:18px;height:18px;color:var(--lime-deep)}
 
-@media(max-width:1180px){.kpi-grid{grid-template-columns:repeat(3,1fr)}.g-2-1,.g-3-2,.g-1-1,.g-1-1-1{grid-template-columns:1fr}.mini-grid{grid-template-columns:repeat(3,1fr)}.rubric{grid-template-columns:1fr}}
-@media(max-width:720px){.side{position:fixed;left:0;transform:translateX(-100%)}.side.mobile-open{transform:none}.kpi-grid{grid-template-columns:repeat(2,1fr)}.search{display:none}.content{padding:18px 14px 90px}}
+@media(max-width:1180px){.g-2-1,.g-3-2,.g-1-1,.g-1-1-1{grid-template-columns:1fr}.mini-grid{grid-template-columns:repeat(3,1fr)}.rubric{grid-template-columns:1fr}}
+@media(max-width:720px){.side{position:fixed;left:0;transform:translateX(-100%)}.side.mobile-open{transform:none}.search{display:none}.content{padding:18px 14px 90px}}
 .settings-list{display:flex;flex-direction:column;gap:10px;margin-top:6px}
 .s-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--card);transition:.15s}
 .s-row:hover{border-color:var(--lime-deep);box-shadow:0 1px 4px rgba(15,23,42,.03)}
@@ -536,8 +545,9 @@ function kpiScope(){
     median:dl.length?Math.round(median(dl)*10)/10:0};
 }
 function kpiCard(ic,cls,val,lab,trend,sub,dec,tip){
-  const tr=trend?`<div class="k-trend ${trend==='up'?'t-up':'t-down'}"><i data-lucide="${trend==='up'?'trending-up':'trending-down'}"></i></div>`:'';
-  return `<div class="kpi" ${tip?`title="${tip}"`:''}><div class="k-ic ${cls}"><i data-lucide="${ic}"></i></div>${tr}
+  const tr=trend?`<span class="k-trend ${trend==='up'?'t-up':'t-down'}"><i data-lucide="${trend==='up'?'trending-up':'trending-down'}"></i></span>`:'<span></span>';
+  return `<div class="kpi" ${tip?`title="${tip}"`:''}>
+    <div class="k-top"><div class="k-ic ${cls}"><i data-lucide="${ic}"></i></div>${tr}</div>
     <div class="k-val" data-to="${val}" data-dec="${dec||0}">0</div>
     <div class="k-lab">${lab}${sub?' · '+sub:''}</div></div>`;
 }
@@ -547,31 +557,29 @@ function buildTrend(mode){
   // Hitung per hari: banyak pegawai kena / banyak pegawai aktif (bukan libur/dinas)
   const emp=DATA.employees;
   const vals=d.map(x=>{
-    const day=x.day;
-    let n=0,kena=0;
+    const day=x.day; let kena=0;
     emp.forEach(e=>{
       const t=e.timeline[day-1]; if(!t) return;
-      const c=e.daycat[String(day)]; if(!c||c==='cuti'||c==='dinas') return;   // libur/dinas dikecualikan
-      n++;
+      const c=e.daycat[String(day)]; if(!c) return;
       if(mode==='late'){       if(c==='telat') kena++; }
-      else if(mode==='early'){ if(t.early>0) kena++; }
+      else if(mode==='early'){ if(t.early>0)  kena++; }
     });
-    return n? +(kena/n*100).toFixed(1) : 0;
+    return kena;
   });
   const single=d.length<=2;
-  const modeCfg={late:{col:'#F59E0B',lab:'terlambat',sub:'Persentase pegawai terlambat'},
-                 early:{col:'#8B5CF6',lab:'pulang awal',sub:'Persentase pegawai pulang lebih awal'}}[mode];
+  const modeCfg={late:{col:'#F59E0B',lab:'terlambat',sub:'Jumlah pegawai terlambat'},
+                 early:{col:'#8B5CF6',lab:'pulang awal',sub:'Jumlah pegawai pulang lebih awal'}}[mode];
   const sub=$('#trendSub'); if(sub)sub.textContent=modeCfg.sub+' · '+scopeLabel();
   charts.trend&&charts.trend.destroy();
   const ctx=$('#cTrend'); const g=ctx.getContext('2d').createLinearGradient(0,0,0,260);
   g.addColorStop(0,modeCfg.col+'40');g.addColorStop(1,modeCfg.col+'00');
-  const maxv=Math.max(...vals,10);
-  const yMax=Math.min(100,Math.ceil(maxv/10)*10+10);   // headroom di atas
+  const maxv=Math.max(...vals,4);
+  const yMax=Math.ceil(maxv*1.2/5)*5;                  // headroom di atas
   const opts=baseOpts({y:{beginAtZero:true,max:yMax,grid:{color:cssv('--grid')},
-      ticks:{color:cssv('--tick'),font:{size:11},callback:v=>v+'%'}},
+      ticks:{color:cssv('--tick'),font:{size:11},precision:0,stepSize:Math.max(1,Math.round(yMax/5))}},
       x:{grid:{display:false},offset:true,   /* offset:true = jeda kiri/kanan sebelum titik pertama/terakhir */
          ticks:{color:cssv('--tick'),font:{size:10.5},maxRotation:0}}});
-  opts.plugins.tooltip.callbacks={label:c=>` ${c.raw}% pegawai ${modeCfg.lab}`};
+  opts.plugins.tooltip.callbacks={label:c=>` ${c.raw} pegawai ${modeCfg.lab}`};
   charts.trend=new Chart(ctx,{type:'line',data:{labels,datasets:[{data:vals,borderColor:modeCfg.col,backgroundColor:g,
     fill:true,tension:.42,borderWidth:2.5,pointRadius:single?7:3,pointBackgroundColor:modeCfg.col,pointBorderColor:cssv('--card'),pointBorderWidth:2,pointHoverRadius:8}]},
     options:opts});
@@ -1012,7 +1020,8 @@ function renderEmpDetail(no){
           <div class="rt"><b style="color:${sc}">${(e.score>0?'+':'')+String(e.score).replace('.',',')}</b><span>POIN</span></div></div>
         <div class="detail-meta">
           <h2>${e.name}</h2>
-          <div class="dm-sub">ID Pegawai #${e.no} · Shift ${e.shift_lab} (${SHIFTS[e.shift].jam} WITA)${e.shift_mixed?' · shift campuran':''} · toleransi ${DATA.meta.grace_min} menit</div>
+          <div class="dm-sub">ID Pegawai #${e.no} · Shift ${e.shift_lab}${e.shift_mixed?' (campuran)':''}</div>
+          ${hpOf(e.name)?`<a class="dm-hp" href="https://wa.me/${hpOf(e.name)}" target="_blank" rel="noopener" title="Buka WhatsApp"><i data-lucide="phone"></i><span class="mono">${hpFormat(hpOf(e.name))}</span></a>`:''}
           <div class="dm-tags">
             ${e.score>=95?badge('Teladan','b-em','award'):''}
             ${e.absen>0?badge(e.absen+'x tanpa ket.','b-dg','user-x'):''}
@@ -1223,6 +1232,69 @@ const txt=h=>{const d=document.createElement('div');d.innerHTML=h||'';return d.t
 
 
 
+
+/* ================= KONTAK (opsional, dari tab 'Kontak') =================
+   Tab 'Kontak' berisi kolom: Nama | No_HP. Bila tab tidak ada, dashboard
+   tetap jalan — nomor telepon hanya tidak ditampilkan. */
+let KONTAK={};
+function loadKontak(rows){
+  KONTAK={};
+  if(!rows||rows.length<2)return;
+  const H=rows[0].map(x=>String(x).trim().toLowerCase());
+  const iN=H.findIndex(x=>x==='nama'), iP=H.findIndex(x=>x.includes('hp')||x.includes('phone')||x.includes('telepon'));
+  rows.slice(1).forEach(r=>{
+    const n=String(r[iN>=0?iN:0]||'').trim();
+    const p=String(r[iP>=0?iP:1]||'').trim();
+    if(n&&p)KONTAK[n.toUpperCase()]=p;
+  });
+}
+const hpOf=name=>KONTAK[String(name||'').trim().toUpperCase()]||null;
+/* 628123456789 -> +62 812-3456-789 (enak dibaca) */
+function hpFormat(d){
+  if(!d)return null;
+  const x=String(d).replace(/\D/g,'');
+  const b=x.startsWith('62')?x.slice(2):x;
+  return '+62 '+b.replace(/(\d{3})(\d{4})(\d{0,4})/, (m,a,b2,c)=>c?`${a}-${b2}-${c}`:`${a}-${b2}`);
+}
+const IDN_BULAN_TXT=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+/* '5 Agustus 2026' sesuai format template WhatsApp */
+function tanggalTeks(d){
+  const iso=dayISO(d); const p=String(iso).split('-');
+  if(p.length!==3)return dayLong(d);
+  return `${+p[2]} ${IDN_BULAN_TXT[+p[1]-1]} ${p[0]}`;
+}
+const jamTanpaNol=t=>String(t||'').replace(/^0/,'');
+
+/* Ekspor "Terlambat" dalam format broadcast WhatsApp (delimiter koma, tanpa BOM) */
+function exportLateCSV(){
+  const day=focusDay();
+  const list=DATA.employees.filter(e=>e.daycat[String(day)]==='telat')
+    .map(e=>{const t=e.timeline[day-1];return {e,t};})
+    .filter(x=>x.t&&x.t.in&&x.t.delay!=null&&x.t.delay>0)
+    .sort((a,b)=>b.t.delay-a.t.delay);
+  if(!list.length)return toast('Tidak ada keterlambatan dengan jam masuk tercatat pada tanggal ini');
+  const tgl=tanggalTeks(day), unit=unitShort();
+  const head=['phone_number','customer_name','body_variable1','body_variable2','body_variable3','body_variable4','body_variable5'];
+  const rows=[],tanpaHP=[];
+  list.forEach(({e,t})=>{
+    const hp=hpOf(e.name);
+    if(!hp){tanpaHP.push(e.name);return;}
+    rows.push([hp,e.name,e.name,unit,tgl,jamTanpaNol(t.in),t.delay]);
+  });
+  if(!rows.length)return toast('Tidak ada nomor telepon yang cocok — isi tab "Kontak" di Google Sheet.');
+  const esc=v=>{const x=String(v==null?'':v);return /[",\n]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x;};
+  const body=[head.join(','),...rows.map(r=>r.map(esc).join(','))].join('\r\n');
+  dlPlain('Terlambat_'+unit+'_'+dayISO(day)+'.csv',body);
+  toast(tanpaHP.length? `CSV diunduh · ${tanpaHP.length} pegawai tanpa nomor telepon dilewati`
+                      : `CSV diunduh · ${rows.length} pegawai`);
+}
+/* unduh tanpa BOM — alat broadcast biasanya menolak BOM di awal berkas */
+function dlPlain(name,content){
+  const blob=new Blob([content],{type:'text/csv;charset=utf-8'});
+  const u=URL.createObjectURL(blob);const a=document.createElement('a');
+  a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);
+}
+
 /* ================= EXPORTS ================= */
 /* ---- Ekspor CSV dengan kolom: Nama | Puskesmas | Tanggal | Jam hadir | Menit terlambat ---- */
 /* Excel dengan pengaturan Indonesia memakai titik-koma sebagai pemisah kolom.
@@ -1244,11 +1316,6 @@ function rowsForDay(day,onlyLate){
       const mnt=jam? ((t&&t.delay!=null)?t.delay:0) : '';
       return [e.name,unitShort(),dayISO(day),jam,mnt];})
     .sort((a,b)=>(+b[4]||0)-(+a[4]||0)||String(a[0]).localeCompare(b[0]));
-}
-function exportLateCSV(){
-  const day=focusDay(),rows=rowsForDay(day,true);
-  if(!rows.length)return toast('Tidak ada keterlambatan pada tanggal ini');
-  csvDownload(KOLOM_TELAT,rows,'Terlambat_'+dayISO(day));
 }
 function exportDayCSV(){
   const day=curDay||focusDay(),rows=rowsForDay(day,false);
@@ -1914,11 +1981,12 @@ async function loadData(silent){
       if(!SEL_PERIOD||!PERIODS.some(x=>x.id===SEL_PERIOD))
         SEL_PERIOD=PERIODS[PERIODS.length-1].id;      // default: bulan terbaru
       const P=PERIODS.find(x=>x.id===SEL_PERIOD);
-      const [cfg,pp,jj,oo]=await Promise.all([
+      const [cfg,pp,jj,oo,kk]=await Promise.all([
         fetchTab('Config',0).catch(()=>[[]]),
         fetchTab('Pegawai_'+SEL_PERIOD,1),
         fetchTab('JamMasuk_'+SEL_PERIOD,1).catch(()=>[[]]),
-        fetchTab('JamPulang_'+SEL_PERIOD,1).catch(()=>[[]])]);
+        fetchTab('JamPulang_'+SEL_PERIOD,1).catch(()=>[[]]),
+        fetchTab('Kontak',1).catch(()=>[[]])]);
       // susun 'Meta' setara format lama supaya lapisan turunan tak perlu diubah
       const C={};(cfg||[]).forEach(r=>{if(r&&r[0])C[String(r[0]).trim()]=String(r[1]==null?'':r[1]).trim();});
       m=[['Kunci','Nilai'],
@@ -1930,10 +1998,12 @@ async function loadData(silent){
          ['batas_telat',C.batas_telat||'3'],
          ['jumlah_pegawai',P.pegawai],
          ['terakhir_diperbarui',P.upd||C.terakhir_diperbarui||'']];
-      p=pp;j=jj;o=oo;
+      p=pp;j=jj;o=oo;loadKontak(kk);
     }else{
+      const kk2=await fetchTab('Kontak',1).catch(()=>[[]]);
       [m,p,j,o]=await Promise.all([fetchTab('Meta',0),fetchTab('Pegawai',1),
         fetchTab('JamMasuk',1).catch(()=>[[]]),fetchTab('JamPulang',1).catch(()=>[[]])]);
+      loadKontak(kk2);
     }
     if(p.length<2)throw new Error('Data bulan ini masih kosong. Jalankan pembaruan (GitHub Actions / Colab) terlebih dahulu.');
     DATA=derive(m,p,j,o);
