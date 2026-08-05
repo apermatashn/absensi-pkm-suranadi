@@ -211,6 +211,11 @@ body{font-family:'Plus Jakarta Sans','Inter',system-ui,sans-serif;background:var
 
 /* Table */
 .tbl-scroll{overflow-x:auto;max-width:100%}
+/* daftar panjang: batasi tinggi lalu geser, jangan memanjangkan halaman */
+.tbl-cap{max-height:322px;overflow-y:auto;overflow-x:auto;max-width:100%}
+.tbl-cap::-webkit-scrollbar{width:8px;height:8px}
+.tbl-cap::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+.tbl-cap table thead th{position:sticky;top:0;background:var(--card);z-index:2}
 table{width:100%;border-collapse:collapse;font-size:13px}
 thead th{text-align:left;font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.5px;
   padding:8px 12px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none}
@@ -221,9 +226,15 @@ tbody tr{transition:background .13s}
 tbody tr:hover{background:var(--hover)}
 tbody tr.clk{cursor:pointer}
 tbody tr:last-child td{border-bottom:none}
-.emp-cell{display:flex;align-items:center;gap:10px}
+/* hanya untuk kartu sempit (3 kolom): paksa kolom nama menyusut & terpotong rapi */
+.tbl-cap.narrow table{table-layout:fixed;width:100%}
+.tbl-cap.narrow table td,.tbl-cap.narrow table th{overflow:hidden;text-overflow:ellipsis}
+.tbl-cap.narrow table td:first-child,.tbl-cap.narrow table th:first-child{width:auto}
+.tbl-cap.narrow table td:not(:first-child),.tbl-cap.narrow table th:not(:first-child){width:74px;white-space:nowrap}
+.emp-cell{display:flex;align-items:center;gap:10px;min-width:0}
+.emp-cell>div{min-width:0}
 .emp-av{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:11px;font-weight:800;flex:0 0 30px;color:#fff}
-.emp-cell b{font-weight:700;font-size:13px}
+.emp-cell b{font-weight:700;font-size:12.8px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .emp-cell small{display:block;color:var(--faint);font-size:10.5px;font-weight:600}
 .badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .b-em{background:var(--emerald-soft);color:var(--emerald)}
@@ -275,9 +286,9 @@ tbody tr:last-child td{border-bottom:none}
 
 /* Employee detail */
 .ring{position:relative;width:96px;height:96px;flex:0 0 96px}
-.ring svg{transform:rotate(-90deg)}
-.ring .rt{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
-.ring .rt b{font-size:24px;font-weight:800;letter-spacing:-1px;line-height:1}
+.ring svg{display:block;transform:rotate(-90deg)}  /* inline svg duduk di baseline -> lingkaran turun, teks tampak tak center */
+.ring .rt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;line-height:1}
+.ring .rt b{font-size:23px;font-weight:800;letter-spacing:-.5px;line-height:1;font-variant-numeric:tabular-nums}
 .ring .rt span{font-size:10px;color:var(--faint);font-weight:700}
 .detail-meta h2{font-size:22px;font-weight:800;letter-spacing:-.5px}
 .detail-meta .dm-sub{color:var(--muted);font-weight:600;font-size:13px;margin-top:2px}
@@ -286,15 +297,14 @@ tbody tr:last-child td{border-bottom:none}
   border-radius:9px;font-size:12.5px;font-weight:700;color:var(--ink);text-decoration:none;background:var(--hover);transition:.15s}
 .dm-hp:hover{border-color:var(--lime-deep);color:var(--lime-ink);background:var(--lime)}
 .dm-hp svg{width:14px;height:14px;color:var(--emerald,#16A34A)}
-.mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0}
-.mini{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
-.mini b{display:block;font-size:16px;font-weight:800;color:var(--ink);line-height:1.2;letter-spacing:-.3px}
-.mini small{display:block;font-size:11px;color:var(--faint);font-weight:650;margin-top:4px;text-transform:uppercase;letter-spacing:.03em}
+.mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin:18px 0}
 .detail-head{display:flex;align-items:center;gap:24px;flex-wrap:wrap;padding-bottom:6px}
 .prof-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.mini{background:var(--hover);border-radius:14px;padding:14px}
-.mini .mv{font-size:20px;font-weight:800;letter-spacing:-.5px}
-.mini .ml{font-size:11px;color:var(--muted);font-weight:600;margin-top:3px}
+/* SATU definisi .mini saja — sebelumnya ada dua yang saling menimpa */
+.mini{background:var(--hover);border:1px solid var(--line);border-radius:13px;padding:13px 15px;min-width:0}
+.mini .mv{font-size:19px;font-weight:800;letter-spacing:-.5px;line-height:1.15;color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini .ml{font-size:10.5px;color:var(--muted);font-weight:650;margin-top:4px;line-height:1.3}
 .cal{display:grid;grid-template-columns:repeat(auto-fill,minmax(48px,1fr));gap:8px}
 .cal-day{aspect-ratio:1;border-radius:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;
   font-size:11px;font-weight:700;position:relative;transition:.15s}
@@ -355,6 +365,11 @@ tbody tr:last-child td{border-bottom:none}
 .sched td small{display:block;font-size:10.5px;color:var(--faint);font-weight:600;margin-top:1px}
 .sched .ok{color:var(--emerald,#16A34A)}
 .sched tbody tr:last-child td{border-bottom:none}
+/* hanya untuk kartu sempit (3 kolom): paksa kolom nama menyusut & terpotong rapi */
+.tbl-cap.narrow table{table-layout:fixed;width:100%}
+.tbl-cap.narrow table td,.tbl-cap.narrow table th{overflow:hidden;text-overflow:ellipsis}
+.tbl-cap.narrow table td:first-child,.tbl-cap.narrow table th:first-child{width:auto}
+.tbl-cap.narrow table td:not(:first-child),.tbl-cap.narrow table th:not(:first-child){width:74px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -501,19 +516,19 @@ function renderDashboard(){
     <div class="card">
       <div class="card-h"><div><h3>Terlambat</h3><p>${dayLong(focusDay())}</p></div>
         <button class="chip" onclick="exportLateCSV()"><i data-lucide="download"></i>CSV</button></div>
-      <div class="tbl-scroll"><table id="lateToday"></table></div>
+      <div class="tbl-cap narrow"><table id="lateToday"></table></div>
       <div id="lateNote" class="tbl-note"></div>
     </div>
     <div class="card">
       <div class="card-h"><div><h3>Pulang Cepat</h3><p>${dayLong(focusDay())}</p></div>
         <button class="chip" onclick="exportEarlyDayCSV()"><i data-lucide="download"></i>CSV</button></div>
-      <div class="tbl-scroll"><table id="earlyToday"></table></div>
+      <div class="tbl-cap narrow"><table id="earlyToday"></table></div>
       <div id="earlyNote" class="tbl-note"></div>
     </div>
     <div class="card">
       <div class="card-h"><div><h3>Lupa Absen</h3><p>${dayLong(focusDay())}</p></div>
         <button class="chip" onclick="exportForgotDayCSV()"><i data-lucide="download"></i>CSV</button></div>
-      <div class="tbl-scroll"><table id="forgotToday"></table></div>
+      <div class="tbl-cap narrow"><table id="forgotToday"></table></div>
       <div id="forgotNote" class="tbl-note"></div>
     </div>
   </div>
@@ -650,12 +665,11 @@ function buildLateToday(){
   const rows=emp.map(e=>{const t=e.timeline[day-1];
     return {e,tin:(t&&t.in)||null,dl:t?t.delay:null};}).sort((a,b)=>(b.dl||0)-(a.dl||0));
   const nRec=rows.filter(r=>!r.tin).length;
-  renderTable('lateToday',[['Pegawai','name'],['Jam Masuk','tin'],['Telat','dl'],['Status','st'],['Skor','sc']],
+  renderTable('lateToday',[['Pegawai','name'],['Masuk','tin'],['Telat','dl']],
     rows.map(r=>({name:empCell(r.e),tin:r.tin?`<span class="mono">${r.tin}</span>`:UNREC,
       dl:r.dl!=null?`<span class="mono" style="color:${r.dl>20?'#EF4444':'#B45309'}">${r.dl} mnt</span>`
         :(r.tin?'<span class="mono" style="color:var(--faint)">0 mnt</span>':UNREC),
-      st:badge('Terlambat','b-am','clock'),sc:scoreBar(r.e.score),
-      _click:r.e.no,_sortk:{dl:r.dl||0,sc:r.e.score,tin:r.tin?tmin(r.tin):0}})), {dl:'desc'});
+      _click:r.e.no,_sortk:{dl:r.dl||0,tin:r.tin?tmin(r.tin):0}})), {dl:'desc'});
   const nt=$('#lateNote');
   if(nt)nt.innerHTML = nRec? `<i data-lucide="info"></i> ${nRec} pegawai tanpa jam masuk terekam di mesin presensi — status mengikuti penandaan sistem, menit keterlambatan tidak dapat dihitung.` : '';
   lucide.createIcons();
@@ -667,13 +681,11 @@ function buildEarlyToday(){
   const rows=[];
   EMP().forEach(e=>{const t=e.timeline[day-1]; if(t&&t.early>0)rows.push({e,t});});
   rows.sort((a,b)=>b.t.early-a.t.early);
-  renderTable('earlyToday',[['Pegawai','name'],['Jam Pulang','out'],['Selisih','ea'],['Shift','sh'],['Skor','sc']],
+  renderTable('earlyToday',[['Pegawai','name'],['Pulang','out'],['Selisih','ea']],
     rows.map(r=>({name:empCell(r.e),
       out:r.t.out?`<span class="mono">${r.t.out}</span>`:UNREC,
       ea:`<span class="mono" style="color:#8B5CF6">${fmtDur(r.t.early)}</span>`,
-      sh:`<small style="color:var(--faint)">${(SHIFTS[r.t.shift]||{}).lab||'-'}</small>`,
-      sc:scoreBar(r.e.score),_click:r.e.no,
-      _sortk:{ea:r.t.early,sc:r.e.score,out:r.t.out?tmin(r.t.out):0}})), {ea:'desc'});
+      _click:r.e.no,_sortk:{ea:r.t.early,out:r.t.out?tmin(r.t.out):0}})), {ea:'desc'});
   const n=$('#earlyNote');
   if(n)n.innerHTML = rows.length? '' : '<i data-lucide="check"></i> Tidak ada pulang lebih awal pada hari ini.';
   lucide.createIcons();
@@ -683,11 +695,10 @@ function buildForgotToday(){
   const rows=[];
   EMP().forEach(e=>{const t=e.timeline[day-1]; if(t&&t.forgot)rows.push({e,t});});
   rows.sort((a,b)=>String(a.e.name).localeCompare(b.e.name));
-  renderTable('forgotToday',[['Pegawai','name'],['Tercatat','tc'],['Yang Hilang','hl'],['Shift','sh']],
+  renderTable('forgotToday',[['Pegawai','name'],['Tercatat','tc'],['Hilang','hl']],
     rows.map(r=>({name:empCell(r.e),
-      tc:r.t.forgot_type==='masuk'?`<span class="mono">masuk ${r.t.in}</span>`:`<span class="mono">pulang ${r.t.out}</span>`,
-      hl:r.t.forgot_type==='masuk'?badge('jam pulang','b-am','log-out'):badge('jam masuk','b-am','log-in'),
-      sh:`<small style="color:var(--faint)">${(SHIFTS[r.t.shift]||{}).lab||'-'}</small>`,
+      tc:r.t.forgot_type==='masuk'?`<span class="mono">${r.t.in}</span>`:`<span class="mono">${r.t.out}</span>`,
+      hl:r.t.forgot_type==='masuk'?badge('pulang','b-am','log-out'):badge('masuk','b-am','log-in'),
       _click:r.e.no})));
   const n=$('#forgotNote');
   if(n)n.innerHTML = rows.length
@@ -751,7 +762,7 @@ function renderDaily(){
     <div class="grid g-2-1">
       <div class="card"><div class="card-h"><div><h3 id="dayTitle"></h3><p id="daySub"></p></div>
         <button class="chip" onclick="exportDayCSV()"><i data-lucide="download"></i>CSV</button></div>
-        <div class="tbl-scroll"><table id="dayTbl"></table></div></div>
+        <div class="tbl-cap" style="max-height:520px"><table id="dayTbl"></table></div></div>
       <div class="card"><div class="card-h"><div><h3>Komposisi Kehadiran</h3><p id="dayComp"></p></div></div>
         <div class="canvas-wrap sm"><canvas id="cDay"></canvas></div><div class="legend" id="dayLegend"></div></div>
     </div>`;
@@ -803,14 +814,14 @@ function renderAnalytics(){
    <div class="grid g-2-1">
     <div class="card"><div class="card-h"><div><h3>Pulang Lebih Awal</h3><p>Akumulasi menit pulang sebelum jadwal · tiap 7 jam = −1 poin</p></div>
       <button class="chip" onclick="exportEarlyCSV()"><i data-lucide="download"></i>CSV</button></div>
-      <div class="tbl-scroll"><table id="earlyTbl"></table></div>
+      <div class="tbl-cap" style="max-height:520px"><table id="earlyTbl"></table></div>
       <div id="earlyEmpty" class="tbl-note"></div></div>
     <div class="card"><div class="card-h"><div><h3>Ringkasan Pulang Awal</h3></div></div>
       <div id="earlyMini"></div></div>
    </div>
    <div class="card"><div class="card-h"><div><h3>Lupa Absen</h3><p>Hari kerja dengan hanya satu jam tercatat (masuk saja atau pulang saja)</p></div>
       <button class="chip" onclick="exportForgotCSV()"><i data-lucide="download"></i>CSV</button></div>
-      <div class="tbl-scroll"><table id="forgotTbl"></table></div>
+      <div class="tbl-cap" style="max-height:520px"><table id="forgotTbl"></table></div>
       <div id="forgotEmpty" class="tbl-note"></div></div>`;
   const bins=[[-99,-3.5],[-3.5,-2.5],[-2.5,-1.5],[-1.5,-0.5],[-0.5,99]];
   const bl=['≤ -4','-3','-2','-1','0'];
@@ -919,7 +930,7 @@ function renderRemu(){
     </div>
     <div class="card"><div class="card-h"><div><h3>Poin Kehadiran per Pegawai</h3><p>${emp.length} pegawai · urut dari poin terendah</p></div>
       <button class="chip" onclick="exportRemuCSV()"><i data-lucide="download"></i>CSV</button></div>
-      <div class="tbl-scroll"><table id="remuTbl"></table></div></div>`;
+      <div class="tbl-cap" style="max-height:520px"><table id="remuTbl"></table></div></div>`;
   renderTable('remuTbl',
     [['#','rk'],['Pegawai','name'],['Alpa','ab'],['Telat','lt'],['Pulang Awal','ea'],['Poin','sc']],
     emp.map((e,i)=>({rk:`<b class="mono" style="color:var(--faint)">${i+1}</b>`,name:empCell(e),
@@ -973,7 +984,7 @@ function renderProfile(){
         <button class="chip" data-flt="issue">Perlu perhatian <b>${nIssue}</b></button>
       </div>
       <div id="empEmpty" class="tbl-note"></div>
-      <div class="tbl-scroll" style="margin-top:8px"><table id="empTbl"></table></div>
+      <div class="tbl-cap" style="max-height:560px;margin-top:8px"><table id="empTbl"></table></div>
     </div>`;
   const build=flt=>{
     let list=emp;
