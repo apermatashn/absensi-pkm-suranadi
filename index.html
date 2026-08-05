@@ -367,6 +367,10 @@ tbody tr:last-child td{border-bottom:none}
           <div class="np-body" id="notifBody"></div>
         </div>
       </div>
+      <div class="date-wrap" id="periodWrap" style="display:none">
+        <button class="datepill" id="periodBtn" title="Pilih bulan"><i data-lucide="calendar-range"></i><span id="periodLabel">Bulan</span><i data-lucide="chevron-down" class="dp-caret"></i></button>
+        <div class="date-panel" id="periodPanel"><div class="dp-list" id="periodList"></div></div>
+      </div>
       <div class="date-wrap">
         <button class="datepill" id="dateBtn"><i data-lucide="calendar"></i><span id="periodPill">Memuat…</span><i data-lucide="chevron-down" class="dp-caret"></i></button>
         <div class="date-panel" id="datePanel"><div class="dp-list" id="dateList"></div></div>
@@ -402,7 +406,10 @@ const CAT_META={
 const UNREC='<span class="mono" style="color:var(--faint)" title="Jam masuk tidak terekam di mesin presensi">tidak terekam</span>';
 const AVCOL=['#16A34A','#0EA5E9','#8B5CF6','#F59E0B','#EF4444','#A8D94A','#0F766E'];
 let charts={}, sortState={}, curView='dashboard', curEmp=null, lastStamp=null;
-let SEL_FROM=null, SEL_TO=null;   // null = seluruh periode
+let SEL_FROM=null, SEL_TO=null;   // null = seluruh periode (dalam bulan terpilih)
+let PERIODS=[];        // daftar bulan tersedia (dari tab 'Periode')
+let SEL_PERIOD=null;   // id bulan terpilih, mis. '2026-08'
+let LEGACY=false;      // true bila Sheet masih format lama (satu bulan)
 let curDay=null;    // hari yang sedang dibuka di Monitoring Harian
 
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -1267,6 +1274,35 @@ function initTheme(){
     b.onclick=()=>setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');}
 }
 
+/* ================= PEMILIH BULAN (riwayat antar-periode) ================= */
+function syncPeriodPill(){
+  const wrap=$('#periodWrap'), lab=$('#periodLabel');
+  if(!wrap)return;
+  if(LEGACY||PERIODS.length<1){ wrap.style.display='none'; return; }
+  wrap.style.display='';
+  const P=PERIODS.find(x=>x.id===SEL_PERIOD);
+  if(lab)lab.textContent=P?P.label:'Bulan';
+}
+function renderPeriodPicker(){
+  const list=$('#periodList'); if(!list)return;
+  list.innerHTML=PERIODS.slice().reverse().map(P=>`
+    <div class="dp-item ${P.id===SEL_PERIOD?'on':''}" data-p="${P.id}">
+      ${P.label}<small>${P.pegawai||'?'} pegawai · ${P.hari||'?'} hari</small></div>`).join('')
+    || '<div class="dp-item">Belum ada data bulan</div>';
+  list.querySelectorAll('.dp-item[data-p]').forEach(it=>it.onclick=()=>{
+    if(it.dataset.p===SEL_PERIOD){ togglePeriod(false); return; }
+    SEL_PERIOD=it.dataset.p;
+    SEL_FROM=SEL_TO=null;              // reset rentang hari saat pindah bulan
+    togglePeriod(false);
+    loadData(true);
+  });
+}
+function togglePeriod(force){
+  const p=$('#periodPanel'); if(!p)return;
+  const show=force!==undefined?force:!p.classList.contains('show');
+  if(show){renderPeriodPicker();p.classList.add('show');} else p.classList.remove('show');
+}
+
 /* ================= LINGKUP TANGGAL (pemilih di kanan atas) ================= */
 const hasAny=d=>['hadir','telat','sakit','izin','cuti','dinas','alpha'].reduce((a,c)=>a+d[c],0)>0;
 const activeDays=()=>DATA.daily.filter(hasAny);
@@ -1368,6 +1404,9 @@ function renderNotif(){
   if(m.diff_status)h+=npItem('git-compare','np-warn','Penyesuaian status shift',
       `${m.diff_status} penandaan hadir/terlambat berbeda dari mesin presensi karena dihitung ulang memakai jadwal shift dan toleransi ${m.grace_min} menit.`,
       'Lihat Pengaturan untuk aturannya');
+  if(!LEGACY&&PERIODS.length>1)h+=npItem('archive','np-info','Riwayat tersimpan',
+      `${PERIODS.length} bulan tersedia: ${PERIODS.map(p=>p.label).join(', ')}.`,
+      'Pilih bulan lewat filter di kanan atas');
   h+=npItem('refresh-cw','np-info','Penyegaran otomatis',
       `Dashboard memeriksa Google Sheet setiap ${CONFIG.REFRESH_MENIT} menit. Klik ikon 🔄 untuk memuat sekarang.`,'');
   body.innerHTML=h;
@@ -1667,9 +1706,53 @@ async function loadData(silent){
   }
   if(!silent)showState('load','Memuat data…','Mengambil data terbaru dari Google Sheet.');
   try{
-    const [m,p,j,o]=await Promise.all([fetchTab('Meta',0),fetchTab('Pegawai',1),fetchTab('JamMasuk',1).catch(()=>[[]]),fetchTab('JamPulang',1).catch(()=>[[]])]);
-    if(p.length<2)throw new Error('Tab "Pegawai" masih kosong. Jalankan notebook Colab terlebih dahulu.');
+    // --- Indeks bulan. Sheet format baru punya tab 'Periode'; format lama tidak. ---
+    if(!PERIODS.length&&!LEGACY){
+      const idx=await fetchTab('Periode',1).catch(()=>[[]]);
+      if(idx&&idx.length>1){
+        const H=idx[0].map(x=>String(x).trim());
+        const col=n=>H.indexOf(n);
+        PERIODS=idx.slice(1).filter(r=>r&&String(r[0]).trim()).map(r=>({
+          id:String(r[col('periode_id')>=0?col('periode_id'):0]).trim(),
+          label:String(r[col('label')>=0?col('label'):1]||'').trim(),
+          mulai:String(r[col('mulai')>=0?col('mulai'):2]||'').trim(),
+          selesai:String(r[col('selesai')>=0?col('selesai'):3]||'').trim(),
+          hari:String(r[col('jumlah_hari')>=0?col('jumlah_hari'):4]||'').trim(),
+          kerja:String(r[col('hari_kerja')>=0?col('hari_kerja'):5]||'').trim(),
+          pegawai:String(r[col('jumlah_pegawai')>=0?col('jumlah_pegawai'):6]||'').trim(),
+          upd:String(r[col('diperbarui')>=0?col('diperbarui'):7]||'').trim()
+        })).sort((a,b)=>String(a.id).localeCompare(b.id));
+      }else{ LEGACY=true; }
+    }
+    let m,p,j,o;
+    if(!LEGACY&&PERIODS.length){
+      if(!SEL_PERIOD||!PERIODS.some(x=>x.id===SEL_PERIOD))
+        SEL_PERIOD=PERIODS[PERIODS.length-1].id;      // default: bulan terbaru
+      const P=PERIODS.find(x=>x.id===SEL_PERIOD);
+      const [cfg,pp,jj,oo]=await Promise.all([
+        fetchTab('Config',0).catch(()=>[[]]),
+        fetchTab('Pegawai_'+SEL_PERIOD,1),
+        fetchTab('JamMasuk_'+SEL_PERIOD,1).catch(()=>[[]]),
+        fetchTab('JamPulang_'+SEL_PERIOD,1).catch(()=>[[]])]);
+      // susun 'Meta' setara format lama supaya lapisan turunan tak perlu diubah
+      const C={};(cfg||[]).forEach(r=>{if(r&&r[0])C[String(r[0]).trim()]=String(r[1]==null?'':r[1]).trim();});
+      m=[['Kunci','Nilai'],
+         ['unit',C.unit||'Puskesmas Suranadi'],
+         ['periode_mulai',P.mulai],['periode_selesai',P.selesai],
+         ['jumlah_hari',P.hari],['hari_kerja',P.kerja],
+         ['jam_masuk_standar',C.jam_masuk_standar||'07:30'],
+         ['toleransi_menit',C.toleransi_menit||'10'],
+         ['batas_telat',C.batas_telat||'3'],
+         ['jumlah_pegawai',P.pegawai],
+         ['terakhir_diperbarui',P.upd||C.terakhir_diperbarui||'']];
+      p=pp;j=jj;o=oo;
+    }else{
+      [m,p,j,o]=await Promise.all([fetchTab('Meta',0),fetchTab('Pegawai',1),
+        fetchTab('JamMasuk',1).catch(()=>[[]]),fetchTab('JamPulang',1).catch(()=>[[]])]);
+    }
+    if(p.length<2)throw new Error('Data bulan ini masih kosong. Jalankan pembaruan (GitHub Actions / Colab) terlebih dahulu.');
     DATA=derive(m,p,j,o);
+    syncPeriodPill(); renderPeriodPicker();
     if(SEL_TO&&SEL_TO>DATA.meta.latest_day){SEL_FROM=SEL_TO=null;}
     syncPill(); renderDatePicker();
     const u=$('#lastUpd');if(u)u.textContent=DATA.meta.updated?('Data per '+fmtStamp(DATA.meta.updated)):'';
@@ -1690,7 +1773,9 @@ window.addEventListener('DOMContentLoaded',()=>{
   lucide.createIcons();
   $$('#nav a').forEach(a=>a.onclick=()=>{if(DATA)nav(a.dataset.view);});
   $('#collapseBtn').onclick=()=>$('#side').classList.toggle('collapsed');
-  $('#dateBtn').onclick=e=>{e.stopPropagation();toggleDate();};
+  $('#periodBtn').onclick=e=>{e.stopPropagation();toggleDate(false);togglePeriod();};
+  document.addEventListener('click',e=>{if(!e.target.closest('#periodWrap'))togglePeriod(false);});
+  $('#dateBtn').onclick=e=>{e.stopPropagation();togglePeriod(false);toggleDate();};
   document.addEventListener('click',e=>{if(!e.target.closest('.date-wrap'))toggleDate(false);});
   $('#notifBtn').onclick=e=>{e.stopPropagation();toggleNotif();};
   $('#notifClose').onclick=e=>{e.stopPropagation();toggleNotif(false);};
