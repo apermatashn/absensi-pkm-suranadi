@@ -350,6 +350,29 @@ tbody tr:last-child td{border-bottom:none}
 @media(max-width:1180px){.g-2-1,.g-3-2,.g-1-1,.g-1-1-1{grid-template-columns:1fr}.mini-grid{grid-template-columns:repeat(3,1fr)}.rubric{grid-template-columns:1fr}}
 @media(max-width:720px){.side{position:fixed;left:0;transform:translateX(-100%)}.side.mobile-open{transform:none}.search{display:none}.content{padding:18px 14px 90px}}
 .settings-list{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+/* kartu aturan memakai gaya baris yang sama dengan halaman Pengaturan */
+.rule-row{display:flex;align-items:center;gap:13px;padding:13px 15px;border:1px solid var(--line);border-radius:12px;background:var(--card);min-width:0}
+/* kartu unduhan di halaman Laporan — gaya ikon sama dengan kartu aturan & pengaturan */
+.rep-card{display:flex;gap:14px;align-items:flex-start;margin-bottom:0}
+.rep-card .s-ic{width:38px;height:38px;flex:0 0 38px;border-radius:11px;display:grid;place-items:center;background:var(--hover)}
+.rep-card .s-ic svg{width:18px;height:18px}
+.rep-card .s-ic.ic-dg{background:var(--danger-soft);color:var(--danger)}
+.rep-card .s-ic.ic-am{background:var(--amber-soft);color:var(--amber)}
+.rep-card .s-ic.ic-vi{background:var(--violet-soft);color:var(--violet)}
+.rep-card .s-ic.ic-sky{background:var(--sky-soft);color:var(--sky)}
+.rep-card .s-ic.ic-em{background:var(--emerald-soft);color:var(--emerald)}
+.rep-card .s-ic.ic-lime{background:var(--lime);color:var(--lime-ink)}
+.rep-card .rep-body{flex:1;min-width:0}
+.rep-card .rep-body h3{font-size:13.8px;font-weight:800;line-height:1.3;margin-bottom:9px}
+.rep-card .rep-body p{font-size:11.5px;color:var(--faint);font-weight:650;margin:-4px 0 11px;line-height:1.45}
+.rule-row .s-ic{width:34px;height:34px;flex:0 0 34px;border-radius:10px;display:grid;place-items:center;background:var(--hover)}
+.rule-row .s-ic svg{width:17px;height:17px}
+.rule-row b{display:block;font-size:13px;font-weight:800;color:var(--ink);line-height:1.3}
+.rule-row small{display:block;font-size:11.5px;color:var(--muted);font-weight:600;margin-top:2px}
+.rule-row .s-ic.ic-dg{background:var(--danger-soft);color:var(--danger)}
+.rule-row .s-ic.ic-am{background:var(--amber-soft);color:var(--amber)}
+.rule-row .s-ic.ic-vi{background:var(--violet-soft);color:var(--violet)}
+.rule-row .s-ic.ic-sky{background:var(--sky-soft);color:var(--sky)}
 .s-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--card);transition:.15s}
 .s-row:hover{border-color:var(--lime-deep);box-shadow:0 1px 4px rgba(15,23,42,.03)}
 .s-row .s-ic{width:34px;height:34px;flex:0 0 34px;border-radius:10px;display:grid;place-items:center;background:var(--hover)}
@@ -930,14 +953,14 @@ function renderRemu(){
   const rata=DATA.kpi.attn_score_avg;
   $('#content').innerHTML=`
     <div class="card">
-      <div class="card-h"><div><h3>Aturan Poin Sanksi</h3><p>Mulai 0 setiap bulan · makin besar poin, makin berat sanksi</p></div></div>
+      <div class="card-h"><div><h3>Aturan Poin Sanksi</h3><p>Berdasarkan Surat Keputusan Kepala Dinas Kesehatan Pengendalian Penduduk dan Keluarga Berencana Kabupaten Lombok Barat Nomor 800/15/SEK/III/2026 tentang Perhitungan Pembagian Remunerasi Badan Layanan Umum Daerah UPT Puskesmas di Kabupaten Lombok Barat Tahun 2026</p></div></div>
       <div class="grid g-1-1" style="gap:12px">
         ${ruleCard('user-x','ic-dg','Tanpa keterangan','2 poin per kejadian')}
         ${ruleCard('calendar-off','ic-sky','Sakit / izin / cuti','1 poin per hari')}
-        ${ruleCard('clock','ic-am','Terlambat','1 poin per kelipatan 3 kali (3–5× = 1 · 6–8× = 2)')}
+        ${ruleCard('clock','ic-am','Terlambat','1 poin per kelipatan 3 kali')}
         ${ruleCard('log-out','ic-vi','Pulang lebih awal','1 poin per akumulasi 7 jam')}
       </div>
-      <div class="note"><b>Perhitungan berlaku per bulan</b> — poin kembali ke 0 pada bulan berikutnya. Keterlambatan hanya menambah poin setiap kelipatan tiga: 5× terlambat tetap 1 poin, baru pada 6× menjadi 2 poin. Dinas luar tidak menambah poin. Tenaga internsip & Nusantara Sehat dikecualikan dari penilaian.</div>
+      <div class="note"><b>Perhitungan berlaku per bulan</b> — poin kembali ke 0 pada bulan berikutnya.</div>
     </div>
     <div class="grid g-2-1">
       <div class="card"><div class="card-h"><div><h3>Ringkasan Poin Sanksi Unit</h3></div></div>
@@ -956,10 +979,10 @@ function renderRemu(){
   renderTable('remuTbl',
     [['#','rk'],['Pegawai','name'],['Alpa','ab'],['S/I/C','sic'],['Telat','lt'],['Pulang Awal','ea'],['Poin','sc']],
     emp.map((e,i)=>({rk:`<b class="mono" style="color:var(--faint)">${i+1}</b>`,name:empCell(e),
-      ab:e.absen?badge(e.absen+'× (+'+e.pot_alpa+')','b-dg'):'<span class="badge b-gray">0</span>',
-      sic:e.pot_sic?`<span class="mono">${e.pot_sic}h (+${e.pot_sic})</span>`:'<span style="color:var(--faint)">0</span>',
-      lt:e.late?`<span class="mono">${e.late}×${e.pot_telat?' (+'+e.pot_telat+')':''}</span>`:'<span style="color:var(--faint)">0</span>',
-      ea:e.early_min?`<span class="mono">${fmtDur(e.early_min)}</span>${e.early_blok?` <span style="color:var(--danger);font-weight:700">(+${e.early_blok})</span>`:''}`:'<span style="color:var(--faint)">—</span>',
+      ab:e.absen?badge(e.absen+'×','b-dg'):'<span class="badge b-gray">0</span>',
+      sic:e.pot_sic?`<span class="mono">${e.pot_sic} hari</span>`:'<span style="color:var(--faint)">0</span>',
+      lt:e.late?`<span class="mono">${e.late}×</span>`:'<span style="color:var(--faint)">0</span>',
+      ea:e.early_min?`<span class="mono">${fmtDur(e.early_min)}</span>`:'<span style="color:var(--faint)">—</span>',
       sc:scoreBar(e.score),_click:e.no,
       _sortk:{ab:e.absen,sic:e.pot_sic,lt:e.late,ea:e.early_min,sc:e.score,rk:i}})),{sc:'desc'});
   charts.remuDist&&charts.remuDist.destroy();
@@ -971,10 +994,9 @@ function renderRemu(){
   lucide.createIcons();
 }
 function ruleCard(ic,cls,t,d){
-  return `<div style="display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:13px;padding:13px">
-    <div class="k-ic ${cls}" style="width:38px;height:38px;flex:0 0 38px"><i data-lucide="${ic}"></i></div>
-    <div><b style="font-size:13px;font-weight:800;display:block">${t}</b>
-      <span style="font-size:12px;color:var(--muted)">${d}</span></div></div>`;
+  return `<div class="rule-row">
+    <i data-lucide="${ic}" class="s-ic ${cls}"></i>
+    <div class="s-body"><b>${t}</b><small>${d}</small></div></div>`;
 }
 function fmtDur(m){const h=Math.floor(m/60),mm=m%60;return h?`${h}j ${mm}m`:`${mm}m`;}
 
@@ -1123,36 +1145,36 @@ function renderReports(){
    </div>
    <div class="section-title" style="margin-top:20px"><i data-lucide="download"></i>Ekspor & Unduh</div>
    <div class="grid g-1-1">
-    ${repCard('file-down','Laporan Kehadiran (PDF)','exportPDF','ic-dg')}
-    ${repCard('table','Rekap Kehadiran (CSV)','exportCSV','ic-em')}
+    ${repCard('file-text','Laporan Kehadiran (PDF)','exportPDF','ic-dg')}
+    ${repCard('table-2','Rekap Kehadiran (CSV)','exportCSV','ic-em')}
     ${repCard('users','Profil Pegawai (CSV)','exportEmpCSV','ic-sky')}
-    ${repCard('gavel','Poin Sanksi (CSV)','exportRemuCSV','ic-lime')}
+    ${repCard('gavel','Poin Sanksi (CSV)','exportRemuCSV','ic-am')}
    </div>
    <div class="section-title"><i data-lucide="message-circle"></i>Kiriman WhatsApp</div>
    <div class="note" style="margin-top:0">Berkas di bawah memakai format broadcast (kolom <span class="mono">phone_number</span>, <span class="mono">body_variable1..5</span>) dan hanya memuat pegawai yang nomornya ada di tab <b>Kontak</b>. Isi tiap variabel dijelaskan di bawah judulnya.</div>
    <div class="grid g-1-1">
     ${waCard('clock','Teguran: Terlambat Hari Ini','exportLateCSV','ic-am',
       'nama · unit · tanggal · jam masuk · menit terlambat')}
-    ${waCard('alert-octagon','Teguran: Telat 3 Hari Berturut','exportStreakCSV','ic-dg',
+    ${waCard('alert-triangle','Teguran: Telat 3 Hari Berturut','exportStreakCSV','ic-dg',
       'nama · unit · jumlah hari · rentang tanggal · total menit')}
-    ${waCard('thumbs-up','Apresiasi: Membaik Hari Ini','exportImprovedCSV','ic-em',
+    ${waCard('award','Apresiasi: Membaik Hari Ini','exportImprovedCSV','ic-em',
       'nama · unit · tanggal · jam masuk · tanggal saat terlambat')}
    </div>`;
   lucide.createIcons();
 }
 function gotoRemu(){nav('remu');}
 function waCard(ic,t,fn,cls,vars){
-  return `<div class="card" style="display:flex;gap:15px;align-items:flex-start;margin-bottom:0">
-    <div class="k-ic ${cls}" style="width:42px;height:42px;flex:0 0 42px"><i data-lucide="${ic}"></i></div>
-    <div style="flex:1;min-width:0"><h3 style="font-size:14px;font-weight:800;line-height:1.3">${t}</h3>
-    <p style="font-size:11.5px;color:var(--faint);font-weight:650;margin:5px 0 11px;line-height:1.45">${vars}</p>
-    <button class="chip on" onclick="${fn}()"><i data-lucide="download"></i>Unduh</button></div></div>`;
+  return `<div class="card rep-card">
+    <i data-lucide="${ic}" class="s-ic ${cls}"></i>
+    <div class="rep-body"><h3>${t}</h3>
+      <p>${vars}</p>
+      <button class="chip on" onclick="${fn}()"><i data-lucide="download"></i>Unduh</button></div></div>`;
 }
 function repCard(ic,t,fn,cls){
-  return `<div class="card" style="display:flex;gap:16px;align-items:center">
-    <div class="k-ic ${cls}" style="width:44px;height:44px;flex:0 0 44px"><i data-lucide="${ic}"></i></div>
-    <div style="flex:1"><h3 style="font-size:14.5px;font-weight:800;margin-bottom:10px">${t}</h3>
-    <button class="chip on" onclick="${fn}()"><i data-lucide="download"></i>Unduh</button></div></div>`;
+  return `<div class="card rep-card">
+    <i data-lucide="${ic}" class="s-ic ${cls}"></i>
+    <div class="rep-body"><h3>${t}</h3>
+      <button class="chip on" onclick="${fn}()"><i data-lucide="download"></i>Unduh</button></div></div>`;
 }
 
 /* ---------------- SETTINGS ---------------- */
@@ -1168,44 +1190,10 @@ function renderSettings(){
          <tr><td><b>Pagi</b><small>Senin – Kamis</small></td><td class="mono">07:30</td><td class="mono ok">≤ 07:50</td><td class="mono">14:00</td><td>± 6 jam</td></tr>
          <tr><td><b>Pagi</b><small>Jumat</small></td><td class="mono">07:30</td><td class="mono ok">≤ 07:50</td><td class="mono">11:00</td><td>± 3 jam</td></tr>
          <tr><td><b>Pagi</b><small>Sabtu</small></td><td class="mono">07:30</td><td class="mono ok">≤ 07:50</td><td class="mono">13:00</td><td>± 5 jam</td></tr>
-         <tr><td><b>Piket Siang</b><small>setiap hari</small></td><td class="mono">14:00</td><td class="mono ok">≤ 14:10</td><td class="mono">20:00</td><td>6 jam</td></tr>
-         <tr><td><b>Piket Malam</b><small>setiap hari</small></td><td class="mono">20:00</td><td class="mono ok">≤ 20:10</td><td class="mono">08:00 (H+1)</td><td>12 jam</td></tr>
+         <tr><td><b>Piket Siang</b><small>tanpa toleransi</small></td><td class="mono">14:00</td><td class="mono ok">14:00</td><td class="mono">20:00</td><td>6 jam</td></tr>
+         <tr><td><b>Piket Malam</b><small>tanpa toleransi</small></td><td class="mono">20:00</td><td class="mono ok">20:00</td><td class="mono">08:00 (H+1)</td><td>12 jam</td></tr>
        </tbody></table></div>
-     <div class="note"><b>Cara kerja.</b> Shift ditentukan otomatis dari jam masuk pegawai (04:00–11:59 → Pagi · 12:00–17:59 → Piket Siang · 18:00–03:59 → Piket Malam). Untuk shift Pagi, batas <b>07:50 final</b> — masuk 07:51 sudah terlambat 1 menit. Piket siang/malam masih memakai toleransi ${m.grace_min} menit. Pulang lebih awal diakumulasi; setiap 7 jam mengurangi 1 poin. Bila jam masuk tidak terekam, status mengikuti penandaan mesin presensi.</div>
-   </div>
-
-   <div class="grid g-1-1">
-     <div class="card">
-       <div class="card-h"><div><h3>Aturan Poin (SK BLUD)</h3><p>Skor mulai 0; makin minus = makin banyak potongan</p></div></div>
-       <div class="settings-list">
-         <div class="s-row"><i data-lucide="user-x" class="s-ic ic-dg"></i>
-           <div><b>Tanpa keterangan</b><small>−2 poin per kejadian</small></div></div>
-         <div class="s-row"><i data-lucide="clock" class="s-ic ic-am"></i>
-           <div><b>Terlambat</b><small>−1 poin jika terjadi 1× atau lebih dalam sebulan</small></div></div>
-         <div class="s-row"><i data-lucide="log-out" class="s-ic ic-vi"></i>
-           <div><b>Pulang lebih awal</b><small>−1 poin per akumulasi 7 jam</small></div></div>
-         <div class="s-row"><i data-lucide="calendar-off" class="s-ic ic-sky"></i>
-           <div><b>Sakit / izin / cuti</b><small>mengurangi hari kerja, bukan poin</small></div></div>
-       </div>
-     </div>
-
-     <div class="card">
-       <div class="card-h"><div><h3>Ambang & Periode</h3></div></div>
-       <div class="settings-list">
-         <div class="s-row"><i data-lucide="clock" class="s-ic ic-am"></i>
-           <div class="s-body"><b>Batas tepat waktu (Pagi)</b><small>final, tanpa toleransi tambahan</small></div>
-           <span class="s-val mono">07:50 WITA</span></div>
-         <div class="s-row"><i data-lucide="timer" class="s-ic ic-em"></i>
-           <div class="s-body"><b>Toleransi piket siang/malam</b><small>selain shift pagi</small></div>
-           <span class="s-val">${m.grace_min} <small>menit</small></span></div>
-         <div class="s-row"><i data-lucide="alert-triangle" class="s-ic ic-dg"></i>
-           <div class="s-body"><b>Batas telat wajar</b><small>penanda "sering telat"</small></div>
-           <span class="s-val">${m.late_limit} <small>kali</small></span></div>
-         <div class="s-row"><i data-lucide="calendar" class="s-ic ic-lime"></i>
-           <div class="s-body"><b>Hari kerja periode</b><small>hari kerja efektif bulan aktif</small></div>
-           <span class="s-val">${m.working_days} <small>hari</small></span></div>
-       </div>
-     </div>
+     <div class="note"><b>Cara kerja.</b> Shift ditentukan otomatis dari jam masuk pegawai (04:00–11:59 → Pagi · 12:00–17:59 → Piket Siang · 18:00–03:59 → Piket Malam). Untuk shift Pagi, batas <b>07:50 final</b> — masuk 07:51 sudah terlambat 1 menit. Piket siang dan malam <b>tanpa toleransi</b> — harus sudah absen paling lambat tepat 14:00 dan 20:00. Pulang lebih awal diakumulasi; setiap 7 jam mengurangi 1 poin. Bila jam masuk tidak terekam, status mengikuti penandaan mesin presensi.</div>
    </div>
 
    <div class="card">
