@@ -189,7 +189,11 @@ body{font-family:'Plus Jakarta Sans','Inter',system-ui,sans-serif;background:var
 .g-1-1{grid-template-columns:1fr 1fr}
 .g-3-2{grid-template-columns:3fr 2fr}
 .g-1-1-1{grid-template-columns:1fr 1fr 1fr}
-.card{background:var(--card);border-radius:var(--r);padding:20px 22px;box-shadow:var(--sh);transition:box-shadow .2s;min-width:0;overflow:hidden}
+.card{background:var(--card);border-radius:var(--r);padding:20px 22px;box-shadow:var(--sh);
+  transition:box-shadow .2s;min-width:0;overflow:hidden;margin-bottom:16px}
+/* kartu di dalam grid tidak perlu margin — jarak sudah diatur oleh gap */
+.grid>.card,.g-1-1-1>.card,.kpi-grid>.card{margin-bottom:0}
+#content>.card:last-child,#content>.grid:last-child{margin-bottom:0}
 .card:hover{box-shadow:var(--sh-hi)}
 .card-h{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap}
 .card-h>div:first-child{min-width:0;flex:1 1 180px}
@@ -338,7 +342,7 @@ tbody tr:last-child td{border-bottom:none}
 .note{font-size:11px;color:var(--faint);font-weight:600;line-height:1.5;background:var(--hover);border-radius:11px;padding:11px 13px;margin-top:14px}
 .note b{color:var(--muted)}
 .filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
-.section-title{font-size:15px;font-weight:800;letter-spacing:-.3px;margin:6px 0 14px;display:flex;align-items:center;gap:9px}
+.section-title{font-size:15px;font-weight:800;letter-spacing:-.3px;margin:26px 0 14px;display:flex;align-items:center;gap:9px}
 .section-title svg{width:18px;height:18px;color:var(--lime-deep)}
 
 @media(max-width:1180px){.g-2-1,.g-3-2,.g-1-1,.g-1-1-1{grid-template-columns:1fr}.mini-grid{grid-template-columns:repeat(3,1fr)}.rubric{grid-template-columns:1fr}}
@@ -365,11 +369,7 @@ tbody tr:last-child td{border-bottom:none}
 .sched td small{display:block;font-size:10.5px;color:var(--faint);font-weight:600;margin-top:1px}
 .sched .ok{color:var(--emerald,#16A34A)}
 .sched tbody tr:last-child td{border-bottom:none}
-/* hanya untuk kartu sempit (3 kolom): paksa kolom nama menyusut & terpotong rapi */
-.tbl-cap.narrow table{table-layout:fixed;width:100%}
-.tbl-cap.narrow table td,.tbl-cap.narrow table th{overflow:hidden;text-overflow:ellipsis}
-.tbl-cap.narrow table td:first-child,.tbl-cap.narrow table th:first-child{width:auto}
-.tbl-cap.narrow table td:not(:first-child),.tbl-cap.narrow table th:not(:first-child){width:74px;white-space:nowrap}
+
 </style>
 </head>
 <body>
@@ -534,7 +534,7 @@ function renderDashboard(){
   </div>
   <div class="card">
     <div class="card-h"><div><h3>Isu Kehadiran Teratas</h3><p id="topSub">Akumulasi menit terlambat · ${scopeLabel()}</p></div>
-      <div class="h-act"><button class="chip on" data-ti="late">Terlambat</button><button class="chip" data-ti="early">Pulang Awal</button><button class="chip" data-ti="forgot">Lupa Absen</button></div></div>
+      <div class="h-act"><button class="chip on" data-ti="late">Terlambat</button><button class="chip" data-ti="early">Pulang Awal</button><button class="chip" data-ti="forgot">Lupa Absen</button><button class="chip" data-ti="streak">Telat Berturut</button></div></div>
     <div id="topIssues"></div>
   </div>
   <div class="card">
@@ -740,6 +740,11 @@ function buildTopIssues(mode){
               e.timeline.forEach(t=>{if(inScope(t.d)&&t.early>0){s+=t.early;n++;}});
               return {e,v:s,n};}).filter(x=>x.v>0).sort((a,b)=>b.v-a.v).slice(0,10);
               return emp.map(x=>({e:x.e,v:x.v,n:x.n,sub:x.n+' hari pulang awal'}));}},
+    streak:{title:'Telat 3 hari berturut-turut (rangkaian terpanjang)', unit:'hari', color:'#DC2626',
+            list:()=>{const seen={};
+              streakList(3).forEach(({e,st})=>{ if(!seen[e.no]||seen[e.no].v<st.len)seen[e.no]={e,v:st.len,n:st.total,st}; });
+              return Object.values(seen).sort((a,b)=>b.v-a.v||b.n-a.n).slice(0,10)
+                .map(x=>({e:x.e,v:x.v,n:x.n,sub:`${tanggalTeks(x.st.start)} – ${tanggalTeks(x.st.end)}`}));}},
     forgot:{title:'Frekuensi lupa absen',        unit:'hari', color:'#EF4444',
             list:()=>{const emp=EMP().map(e=>({e,v:e.timeline.filter(t=>inScope(t.d)&&t.forgot).length,n:0}))
               .filter(x=>x.v>0).sort((a,b)=>b.v-a.v).slice(0,10);
@@ -762,7 +767,7 @@ function renderDaily(){
     <div class="grid g-2-1">
       <div class="card"><div class="card-h"><div><h3 id="dayTitle"></h3><p id="daySub"></p></div>
         <button class="chip" onclick="exportDayCSV()"><i data-lucide="download"></i>CSV</button></div>
-        <div class="tbl-cap" style="max-height:520px"><table id="dayTbl"></table></div></div>
+        <div class="tbl-scroll"><table id="dayTbl"></table></div></div>
       <div class="card"><div class="card-h"><div><h3>Komposisi Kehadiran</h3><p id="dayComp"></p></div></div>
         <div class="canvas-wrap sm"><canvas id="cDay"></canvas></div><div class="legend" id="dayLegend"></div></div>
     </div>`;
@@ -1036,6 +1041,7 @@ function renderEmpDetail(no){
           <div class="dm-tags">
             ${e.score>=95?badge('Teladan','b-em','award'):''}
             ${e.absen>0?badge(e.absen+'x tanpa ket.','b-dg','user-x'):''}
+            ${e.streak_max>=3?badge(e.streak_max+'× telat berturut','b-dg','alert-octagon'):''}
             ${e.late>0?badge(e.late+'× telat','b-am','clock'):''}
             ${e.early_blok>0?badge('Pulang awal −'+e.early_blok,'b-vi','log-out'):''}
             ${e.dluar>0?badge(e.dluar+'x dinas luar','b-gray','briefcase'):''}
@@ -1103,12 +1109,30 @@ function renderReports(){
     ${repCard('table','Rekap Kehadiran (CSV)','exportCSV','ic-em')}
     ${repCard('users','Profil Pegawai (CSV)','exportEmpCSV','ic-sky')}
     ${repCard('coins','Poin Kehadiran (CSV)','exportRemuCSV','ic-lime')}
-    ${repCard('clock','Terlambat per Tanggal (CSV)','exportLateCSV','ic-am')}
     ${repCard('image-down','Tangkapan Dashboard (PNG)','exportPNG','ic-vi')}
+   </div>
+   <div class="section-title"><i data-lucide="message-circle"></i>Kiriman WhatsApp</div>
+   <div class="note" style="margin-top:0">Berkas di bawah memakai format broadcast (kolom <span class="mono">phone_number</span>, <span class="mono">body_variable1..5</span>) dan hanya memuat pegawai yang nomornya ada di tab <b>Kontak</b>. Isi tiap variabel dijelaskan di bawah judulnya.</div>
+   <div class="grid g-1-1">
+    ${waCard('clock','Teguran: Terlambat Hari Ini','exportLateCSV','ic-am',
+      'nama · unit · tanggal · jam masuk · menit terlambat')}
+    ${waCard('alert-octagon','Teguran: Telat 3 Hari Berturut','exportStreakCSV','ic-dg',
+      'nama · unit · jumlah hari · rentang tanggal · total menit')}
+    ${waCard('thumbs-up','Apresiasi: Membaik Hari Ini','exportImprovedCSV','ic-em',
+      'nama · unit · tanggal · jam masuk · tanggal saat terlambat')}
+    ${waCard('log-out','Pulang Cepat Hari Ini (CSV biasa)','exportEarlyDayCSV','ic-vi',
+      'bukan format WhatsApp — untuk arsip/analisis')}
    </div>`;
   lucide.createIcons();
 }
 function gotoRemu(){nav('remu');}
+function waCard(ic,t,fn,cls,vars){
+  return `<div class="card" style="display:flex;gap:15px;align-items:flex-start;margin-bottom:0">
+    <div class="k-ic ${cls}" style="width:42px;height:42px;flex:0 0 42px"><i data-lucide="${ic}"></i></div>
+    <div style="flex:1;min-width:0"><h3 style="font-size:14px;font-weight:800;line-height:1.3">${t}</h3>
+    <p style="font-size:11.5px;color:var(--faint);font-weight:650;margin:5px 0 11px;line-height:1.45">${vars}</p>
+    <button class="chip on" onclick="${fn}()"><i data-lucide="download"></i>Unduh</button></div></div>`;
+}
 function repCard(ic,t,fn,cls){
   return `<div class="card" style="display:flex;gap:16px;align-items:center">
     <div class="k-ic ${cls}" style="width:44px;height:44px;flex:0 0 44px"><i data-lucide="${ic}"></i></div>
@@ -1304,6 +1328,81 @@ function dlPlain(name,content){
   const blob=new Blob([content],{type:'text/csv;charset=utf-8'});
   const u=URL.createObjectURL(blob);const a=document.createElement('a');
   a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);
+}
+
+
+/* ============ FLAG: TELAT BERTURUT-TURUT & MEMBAIK ============ */
+/* Rangkaian >=N hari telat berturut-turut yang seluruh harinya masuk lingkup terpilih */
+function streakList(minLen){
+  const N=minLen||3, out=[];
+  EMP().forEach(e=>(e.streaks||[]).forEach(st=>{
+    if(st.len>=N && st.days.every(d=>inScope(d))) out.push({e,st});
+  }));
+  return out.sort((a,b)=>b.st.len-a.st.len||b.st.total-a.st.total);
+}
+/* Hari kerja (hadir/telat) sebelum hari d bagi pegawai e */
+function prevWorkDay(e,d){
+  for(let x=d-1;x>=1;x--){
+    const c=e.daycat[String(x)];
+    if(c==='hadir'||c==='telat')return x;
+    if(c) return null;          // cuti/sakit/izin/dinas/alpa -> tidak dibandingkan
+  }
+  return null;
+}
+/* Pegawai yang hari kerja sebelumnya TERLAMBAT tapi pada hari ini TEPAT WAKTU */
+function improvedList(day){
+  const d=day||focusDay(), out=[];
+  EMP().forEach(e=>{
+    if(e.daycat[String(d)]!=='hadir')return;
+    const p=prevWorkDay(e,d);
+    if(p===null)return;
+    if(e.daycat[String(p)]!=='telat')return;
+    const t=e.timeline[d-1]||{}, tp=e.timeline[p-1]||{};
+    /* Hanya bandingkan bila SHIFT-nya sama. Tanpa ini, pindah shift
+       (mis. telat pagi lalu besok piket malam) salah terbaca sebagai "membaik". */
+    if(!t.shift||!tp.shift||t.shift!==tp.shift)return;
+    out.push({e,day:d,prev:p,shift:t.shift,in_now:t.in||null,in_prev:tp.in||null,delay_prev:tp.delay||0});
+  });
+  return out.sort((a,b)=>b.delay_prev-a.delay_prev);
+}
+
+/* ---- Ekspor WhatsApp: TEGURAN telat berturut-turut ---- */
+function exportStreakCSV(){
+  const list=streakList(3);
+  if(!list.length)return toast('Tidak ada yang terlambat 3 hari berturut-turut pada rentang ini');
+  const head=['phone_number','customer_name','body_variable1','body_variable2','body_variable3','body_variable4','body_variable5'];
+  const rows=[],noHp=[];
+  list.forEach(({e,st})=>{
+    const hp=hpOf(e.name);
+    if(!hp){noHp.push(e.name);return;}
+    const rentang = st.start===st.end? tanggalTeks(st.start)
+                  : `${tanggalTeks(st.start)} - ${tanggalTeks(st.end)}`;
+    rows.push([hp,e.name,e.name,unitShort(),st.len,rentang,st.total]);
+  });
+  if(!rows.length)return toast('Tidak ada nomor telepon yang cocok — isi tab "Kontak"');
+  waDownload(head,rows,'Telat_Berturut_'+unitShort()+'_'+dayISO(focusDay()));
+  toast(noHp.length? `CSV diunduh · ${noHp.length} tanpa nomor dilewati` : `CSV diunduh · ${rows.length} pegawai`);
+}
+/* ---- Ekspor WhatsApp: APRESIASI yang membaik ---- */
+function exportImprovedCSV(){
+  const list=improvedList();
+  if(!list.length)return toast('Tidak ada pegawai yang membaik pada tanggal ini');
+  const head=['phone_number','customer_name','body_variable1','body_variable2','body_variable3','body_variable4','body_variable5'];
+  const rows=[],noHp=[];
+  list.forEach(r=>{
+    const hp=hpOf(r.e.name);
+    if(!hp){noHp.push(r.e.name);return;}
+    rows.push([hp,r.e.name,r.e.name,unitShort(),tanggalTeks(r.day),
+      jamTanpaNol(r.in_now||''),tanggalTeks(r.prev)]);
+  });
+  if(!rows.length)return toast('Tidak ada nomor telepon yang cocok — isi tab "Kontak"');
+  waDownload(head,rows,'Apresiasi_Membaik_'+unitShort()+'_'+dayISO(focusDay()));
+  toast(noHp.length? `CSV diunduh · ${noHp.length} tanpa nomor dilewati` : `CSV diunduh · ${rows.length} pegawai`);
+}
+/* penulis CSV format broadcast: koma, CRLF, tanpa BOM */
+function waDownload(head,rows,fname){
+  const esc=v=>{const x=String(v==null?'':v);return /[",\n]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x;};
+  dlPlain(fname+'.csv',[head.join(','),...rows.map(r=>r.map(esc).join(','))].join('\r\n'));
 }
 
 /* ================= EXPORTS ================= */
@@ -1917,6 +2016,25 @@ function derive(metaRows,pegRows,jamRows,outRows){
   const scoreOf=e=> -(2*e.absen) - (e.late>0?1:0) - (e.early_blok||0);
   const endDt=dateOf(nd),lastDt=dateOf(last);
 
+  /* ---- Rangkaian telat berturut-turut ----
+     Dihitung hanya pada hari saat pegawai BENAR-BENAR masuk kerja (hadir/telat).
+     Hari tanpa status (libur/Minggu) dilewati; cuti/sakit/izin/dinas/alpa
+     MEMUTUS rangkaian, karena pada hari itu ia tidak sedang bekerja. */
+  employees.forEach(e=>{
+    const runs=[]; let cur=[];
+    for(let d=1;d<=nd;d++){
+      const c=e.daycat[String(d)];
+      if(!c) continue;                       // libur -> dilewati, tidak memutus
+      if(c==='telat'){ cur.push(d); }
+      else { if(cur.length)runs.push(cur); cur=[]; }   // termasuk 'hadir' -> memutus
+    }
+    if(cur.length)runs.push(cur);
+    e.streaks=runs.filter(r=>r.length>=3).map(r=>({
+      start:r[0], end:r[r.length-1], len:r.length,
+      total:r.reduce((a,d)=>a+((e.timeline[d-1]||{}).delay||0),0), days:r.slice()
+    }));
+    e.streak_max=runs.reduce((a,r)=>Math.max(a,r.length),0);
+  });
   employees.forEach(e=>{
     e.score=scoreOf(e);
     e.pot_alpa=2*e.absen; e.pot_telat=(e.late>0?1:0); e.pot_early=e.early_blok||0;
